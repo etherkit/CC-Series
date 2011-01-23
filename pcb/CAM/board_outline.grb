@@ -1,0 +1,319 @@
+G04 FreePCB version 1.359*
+G04 Z:\home\jason\Ubuntu One\Project X\CC\CAM\board_outline.grb*
+G04 board outline layer *
+G04 Scale: 100 percent, Rotated: No, Reflected: No *
+%FSLAX24Y24*%
+%MOIN*%
+%LN board outline *%
+G04 Rounded Rectangle Macro, params: W/2, H/2, R *
+%AMRNDREC*
+21,1,$1+$1,$2+$2-$3-$3,0,0,0*
+21,1,$1+$1-$3-$3,$2+$2,0,0,0*
+1,1,$3+$3,$1-$3,$2-$3*
+1,1,$3+$3,$3-$1,$2-$3*
+1,1,$3+$3,$1-$3,$3-$2*
+1,1,$3+$3,$3-$1,$3-$2*%
+G04 Rectangular Thermal Macro, params: W/2, H/2, T/2 *
+%AMRECTHERM*
+$4=$3/2*
+21,1,$1-$3,$2-$3,0-$1/2-$4,0-$2/2-$4,0*
+21,1,$1-$3,$2-$3,0-$1/2-$4,$2/2+$4,0*
+21,1,$1-$3,$2-$3,$1/2+$4,0-$2/2-$4,0*
+21,1,$1-$3,$2-$3,$1/2+$4,$2/2+$4,0*%
+%ADD10C,0.005000*%
+G90*
+G70D02*
+
+G04 Step and Repeat for panelization *
+
+G04 ----------------------- Draw board outline (positive)*
+%LPD*%
+G54D10*
+G01X0Y0D02*
+G01X55118Y0D01*
+G04 end of side 1*
+G01X55118Y31496D01*
+G04 end of side 2*
+G01X0Y31496D01*
+G04 end of side 3*
+G01X0Y0D01*
+
+G04 -------------- Draw Parts, Pads, Traces, Vias and Text (positive)*
+%LPD*%
+G04 Draw part C16*
+G04 Draw part C17*
+G04 Draw part C20*
+G04 Draw part C18*
+G04 Draw part C23*
+G04 Draw part Q6*
+G04 Draw part Q5*
+G04 Draw part Q7*
+G04 Draw part R13*
+G04 Draw part R15*
+G04 Draw part R17*
+G04 Draw part R14*
+G04 Draw part Q4*
+G04 Draw part Q3*
+G04 Draw part R16*
+G04 Draw part R12*
+G04 Draw part C24*
+G04 Draw part R5*
+G04 Draw part C12*
+G04 Draw part C14*
+G04 Draw part R10*
+G04 Draw part Q2*
+G04 Draw part Q1*
+G04 Draw part R11*
+G04 Draw part R9*
+G04 Draw part C19*
+G04 Draw part C13*
+G04 Draw part C1*
+G04 Draw part R1*
+G04 Draw part C2*
+G04 Draw part C7*
+G04 Draw part C3*
+G04 Draw part C8*
+G04 Draw part C9*
+G04 Draw part C4*
+G04 Draw part C10*
+G04 Draw part C11*
+G04 Draw part R2*
+G04 Draw part R6*
+G04 Draw part R3*
+G04 Draw part R7*
+G04 Draw part R4*
+G04 Draw part R8*
+G04 Draw part C5*
+G04 Draw part C42*
+G04 Draw part R39*
+G04 Draw part Q12*
+G04 Draw part Q11*
+G04 Draw part R40*
+G04 Draw part R34*
+G04 Draw part C46*
+G04 Draw part C38*
+G04 Draw part R24*
+G04 Draw part C36*
+G04 Draw part C41*
+G04 Draw part C44*
+G04 Draw part C15*
+G04 Draw part R33*
+G04 Draw part Q9*
+G04 Draw part Q8*
+G04 Draw part R35*
+G04 Draw part R32*
+G04 Draw part R19*
+G04 Draw part C30*
+G04 Draw part R22*
+G04 Draw part R25*
+G04 Draw part U1*
+G04 Draw part R28*
+G04 Draw part R21*
+G04 Draw part D3*
+G04 Draw part D2*
+G04 Draw part R18*
+G04 Draw part C31*
+G04 Draw part Q10*
+G04 Draw part R36*
+G04 Draw part R27*
+G04 Draw part C33*
+G04 Draw part C25*
+G04 Draw part R29*
+G04 Draw part R20*
+G04 Draw part C29*
+G04 Draw part C32*
+G04 Draw part R30*
+G04 Draw part R26*
+G04 Draw part R31*
+G04 Draw part R23*
+G04 Draw part C28*
+G04 Draw part J1*
+G04 Draw part Q13*
+G04 Draw part R37*
+G04 Draw part R41*
+G04 Draw part L7*
+G04 Draw part C43*
+G04 Draw part C45*
+G04 Draw part R38*
+G04 Draw part C37*
+G04 Draw part C47*
+G04 Draw part R64*
+G04 Draw part R69*
+G04 Draw part Q21*
+G04 Draw part R61*
+G04 Draw part C75*
+G04 Draw part R66*
+G04 Draw part L16*
+G04 Draw part R62*
+G04 Draw part D7*
+G04 Draw part D6*
+G04 Draw part C87*
+G04 Draw part R65*
+G04 Draw part D5*
+G04 Draw part C76*
+G04 Draw part R57*
+G04 Draw part R60*
+G04 Draw part R56*
+G04 Draw part C74*
+G04 Draw part R58*
+G04 Draw part Q20*
+G04 Draw part R59*
+G04 Draw part Q15*
+G04 Draw part R45*
+G04 Draw part C54*
+G04 Draw part R53*
+G04 Draw part L10*
+G04 Draw part C59*
+G04 Draw part C61*
+G04 Draw part R49*
+G04 Draw part C63*
+G04 Draw part C60*
+G04 Draw part R52*
+G04 Draw part Q17*
+G04 Draw part Q16*
+G04 Draw part R54*
+G04 Draw part R51*
+G04 Draw part C64*
+G04 Draw part R42*
+G04 Draw part C49*
+G04 Draw part Q22*
+G04 Draw part R67*
+G04 Draw part R70*
+G04 Draw part C79*
+G04 Draw part C88*
+G04 Draw part R63*
+G04 Draw part R68*
+G04 Draw part C56*
+G04 Draw part C52*
+G04 Draw part C58*
+G04 Draw part R46*
+G04 Draw part Q14*
+G04 Draw part R48*
+G04 Draw part C50*
+G04 Draw part C53*
+G04 Draw part R44*
+G04 Draw part R50*
+G04 Draw part U3*
+G04 Draw part R47*
+G04 Draw part R43*
+G04 Draw part R55*
+G04 Draw part Q18*
+G04 Draw part Q19*
+G04 Draw part C70*
+G04 Draw part C71*
+G04 Draw part C69*
+G04 Draw part C72*
+G04 Draw part C65*
+G04 Draw part C66*
+G04 Draw part C73*
+G04 Draw part U5*
+G04 Draw part R71*
+G04 Draw part C89*
+G04 Draw part J3*
+G04 Draw part C90*
+G04 Draw part C96*
+G04 Draw part C95*
+G04 Draw part R76*
+G04 Draw part R75*
+G04 Draw part C100*
+G04 Draw part C101*
+G04 Draw part Q23*
+G04 Draw part R72*
+G04 Draw part R73*
+G04 Draw part R74*
+G04 Draw part C94*
+G04 Draw part U4*
+G04 Draw part U6*
+G04 Draw part C92*
+G04 Draw part C99*
+G04 Draw part C98*
+G04 Draw part C91*
+G04 Draw part C93*
+G04 Draw part C97*
+G04 Draw part Q24*
+G04 Draw part Q25*
+G04 Draw part R79*
+G04 Draw part R81*
+G04 Draw part R80*
+G04 Draw part C102*
+G04 Draw part D9*
+G04 Draw part C21*
+G04 Draw part C22*
+G04 Draw part C48*
+G04 Draw part C62*
+G04 Draw part C55*
+G04 Draw part C57*
+G04 Draw part C39*
+G04 Draw part TP1*
+G04 Draw part C77*
+G04 Draw part C84*
+G04 Draw part C80*
+G04 Draw part C82*
+G04 Draw part C51*
+G04 Draw part C67*
+G04 Draw part TP5*
+G04 Draw part TP6*
+G04 Draw part TP4*
+G04 Draw part TP3*
+G04 Draw part TP2*
+G04 Draw part R78*
+G04 Draw part C104*
+G04 Draw part C105*
+G04 Draw part D10*
+G04 Draw part TP7*
+G04 Draw part TP8*
+G04 Draw part D8*
+G04 Draw part C6*
+G04 Draw part C40*
+G04 Draw part C27*
+G04 Draw part C26*
+G04 Draw part C34*
+G04 Draw part C35*
+G04 Draw part C68*
+G04 Draw part C103*
+G04 Draw part C78*
+G04 Draw part C83*
+G04 Draw part C86*
+G04 Draw part C85*
+G04 Draw part C81*
+G04 Draw part D1*
+G04 Draw part D4*
+G04 Draw part S2*
+G04 Draw part S1*
+G04 Draw part X1*
+G04 Draw part X2*
+G04 Draw part X3*
+G04 Draw part X4*
+G04 Draw part X5*
+G04 Draw part X6*
+G04 Draw part X7*
+G04 Draw part R77*
+G04 Draw part U2*
+G04 Draw part L3*
+G04 Draw part L4*
+G04 Draw part L8*
+G04 Draw part L9*
+G04 Draw part L2*
+G04 Draw part L1*
+G04 Draw part L6*
+G04 Draw part L5*
+G04 Draw part L11*
+G04 Draw part L12*
+G04 Draw part L13*
+G04 Draw part L14*
+G04 Draw part L15*
+G04 Draw part J2*
+G04 Draw part J4*
+G04 Draw part J6*
+G04 Draw part J5*
+G04 Draw part H1*
+G04 Draw part H2*
+G04 Draw part H3*
+G04 Draw part H4*
+G04 Draw part H5*
+
+G04 Draw traces*
+
+G04 Draw Text*
+M00*
+M02*
