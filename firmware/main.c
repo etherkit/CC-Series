@@ -41,6 +41,11 @@
 #define CMD_BUTTON_DDR			DDRD
 #define CMD_BUTTON_PIN			PIND
 
+#define MSG_BUTTON				PD1			// Message button
+#define MSG_BUTTON_PORT			PORTD
+#define MSG_BUTTON_DDR			DDRD
+#define MSG_BUTTON_PIN			PIND
+
 #define MUTE					PC5			// Mute output
 #define MUTE_PORT				PORTC
 #define MUTE_DDR				DDRC
@@ -49,10 +54,10 @@
 #define TX_PORT					PORTC
 #define TX_DDR					DDRC
 
-//#define SIDETONE_PERIOD			7			// 600 Hz freq = 1.66 ms period, (1.66 ms/100 us)/2 = 8 (-1 since count from 0)
 #define TIMER2_COUNT			249			// 4 us clk period * 250 ticks (0-249)= 1 ms Timer2 CTC A overflow
 #define PWM_DELAY				5			// PWM sidetone freq is 2 kHz, /5 to set to ~650 kHz
-#define DEBOUNCE_TIME			5			// Amount of captures for keybounce
+#define DEBOUNCE_PRESS_TIME		10			// Amount of captures for press keybounce (in 1 ms increments)
+#define DEBOUNCE_HOLD_TIME		1000		// Amount of captures for hold keybounce (in 1 ms increments)
 #define DEFAULT_WPM				12			// Default keyer WPM
 #define TX_ON_DELAY				1			// TX sequence delay time (in 1 ms increments)
 #define MUTE_OFF_DELAY			100			// Mute off delay time (in 1 ms increments)
@@ -63,13 +68,14 @@
 // State machine and other enumerations
 enum BOOL {FALSE, TRUE};
 enum STATE {IDLE, DIT, DAH, DITDELAY, DAHDELAY, WORDDELAY, KEYDOWN, ENDKEYDOWN};
-enum MODE {KEYER, SK, ANNOUNCE};
+enum MODE {KEYER, SK, ANNOUNCE, TUNE};
+enum BTN {OFF, PRESS, HOLD};
 
 // Global variable defs
 uint16_t dit_length;
 uint8_t wpm;
 enum STATE prev_state, cur_state, next_state;
-enum BOOL cmd_active;
+enum BTN cmd_btn, msg_btn;
 char * announce_buffer;
 
 // Global variables used in ISRs
@@ -94,6 +100,10 @@ void read_voltage(void);
 void count_frequency(void);
 
 
+// Timer0 ISR
+//
+// Timer0 does double duty as the PWM register and also as the sinewave generator during the
+// overflow ISR.
 ISR(TIMER0_OVF_vect)
 {
 	static uint8_t pwm_delay;
@@ -117,12 +127,19 @@ ISR(TIMER0_OVF_vect)
 	}
 }
 
+// Timer1 ISR
+//
+// Timer1 is used as the frequency counter. The only thing we need to do during this ISR is
+// capture the number of timer overflows as a "17th bit" for the counter.
 ISR(TIMER1_OVF_vect)
 {
 	fc_ovf++;
 }
 
 // Timer2 ISR
+//
+// Fires every 1 ms. Used as a main system clock, for frequency counting, and handles the
+// mute and transmit ports.
 ISR(TIMER2_COMPA_vect)
 {
 	//static uint8_t ind;
@@ -144,17 +161,6 @@ ISR(TIMER2_COMPA_vect)
 		fc_period = 0;
 		fc_ovf = 0;
 	}
-
-	// If the sidetone is on, generate it by flipping port every half-period
-	/*
-	if((++tone_counter >= SIDETONE_PERIOD) && (sidetone_on == TRUE))
-	{
-		SIDETONE_PORT ^= _BV(SIDETONE);
-		tone_counter = 0;
-	}
-	else if(sidetone_on == FALSE)
-		SIDETONE_PORT &= ~(_BV(SIDETONE));
-		*/
 
 	// Handle mute
 	if(((timer > mute_start) && (timer < mute_end)) || (mute_on == TRUE))
@@ -221,6 +227,14 @@ void init(void)
 	CMD_BUTTON_DDR &= ~(_BV(CMD_BUTTON));
 	CMD_BUTTON_PORT |= _BV(CMD_BUTTON); // Enable pull-up
 
+	MSG_BUTTON_DDR &= ~(_BV(MSG_BUTTON));
+	MSG_BUTTON_PORT |= _BV(MSG_BUTTON); // Enable pull-up
+
+	// Power saving
+	power_spi_disable();
+	power_twi_disable();
+	power_usart0_disable();
+
 	// Initialize global variables
 	prev_state = IDLE;
 	cur_state = IDLE;
@@ -242,18 +256,18 @@ void set_wpm(uint8_t new_wpm)
 
 void debounce(void)
 {
-	static uint8_t dit_on_count, dah_on_count, dit_off_count, dah_off_count, cmd_on_count, cmd_off_count;
+	static uint16_t dit_on_count, dah_on_count, dit_off_count, dah_off_count, cmd_on_count, msg_on_count;
 
 	// Debounce buttons
 	if(bit_is_clear(PADDLE_DIT_PIN, PADDLE_DIT))
 	{
-		if(dit_on_count < DEBOUNCE_TIME)
+		if(dit_on_count < DEBOUNCE_PRESS_TIME)
 			dit_on_count++;
 		dit_off_count = 0;
 	}
 	else
 	{
-		if(dit_off_count < DEBOUNCE_TIME)
+		if(dit_off_count < DEBOUNCE_PRESS_TIME)
 			dit_off_count++;
 		dit_on_count = 0;
 	}
@@ -261,43 +275,64 @@ void debounce(void)
 
 	if(bit_is_clear(PADDLE_DAH_PIN, PADDLE_DAH))
 	{
-		if(dah_on_count < DEBOUNCE_TIME)
+		if(dah_on_count < DEBOUNCE_PRESS_TIME)
 			dah_on_count++;
 		dah_off_count = 0;
 	}
 	else
 	{
-		if(dah_off_count < DEBOUNCE_TIME)
+		if(dah_off_count < DEBOUNCE_PRESS_TIME)
 			dah_off_count++;
 		dah_on_count = 0;
 	}
 
 	if(bit_is_clear(CMD_BUTTON_PIN, CMD_BUTTON))
-	{
 		cmd_on_count++;
-		//cmd_off_count = 0;
-	}
 	else
 	{
-		//cmd_off_count++;
+		if((cmd_on_count >= DEBOUNCE_PRESS_TIME) && (cmd_on_count < DEBOUNCE_HOLD_TIME))
+			cmd_btn = PRESS;
+		else if(cmd_on_count >= DEBOUNCE_HOLD_TIME)
+			cmd_btn = HOLD;
+		else
+			cmd_btn = OFF;
+
 		cmd_on_count = 0;
 	}
 
-	if(dit_on_count >= DEBOUNCE_TIME)
+	if(bit_is_clear(MSG_BUTTON_PIN, MSG_BUTTON))
+		msg_on_count++;
+	else
+	{
+		if((msg_on_count >= DEBOUNCE_PRESS_TIME) && (msg_on_count < DEBOUNCE_HOLD_TIME))
+			msg_btn = PRESS;
+		else if(msg_on_count >= DEBOUNCE_HOLD_TIME)
+			msg_btn = HOLD;
+		else
+			msg_btn = OFF;
+
+		msg_on_count = 0;
+	}
+
+	// Set button flags according to final debounce count
+	if(dit_on_count >= DEBOUNCE_PRESS_TIME)
 		dit_active = TRUE;
-	if(dit_off_count >= DEBOUNCE_TIME)
+	if(dit_off_count >= DEBOUNCE_PRESS_TIME)
 		dit_active = FALSE;
 
-	if(dah_on_count >= DEBOUNCE_TIME)
+	if(dah_on_count >= DEBOUNCE_PRESS_TIME)
 		dah_active = TRUE;
-	if(dah_off_count >= DEBOUNCE_TIME)
+	if(dah_off_count >= DEBOUNCE_PRESS_TIME)
 		dah_active = FALSE;
 
+
+	/*
 	if(cmd_on_count >= DEBOUNCE_TIME)
 		cmd_active = TRUE;
 	else
 	//if(cmd_off_count >= DEBOUNCE_TIME)
 		cmd_active = FALSE;
+		*/
 
 	//dit_active = (dit_count > DEBOUNCE_TIME) ? TRUE : FALSE;
 	//dah_active = (dah_count > DEBOUNCE_TIME) ? TRUE : FALSE;
@@ -405,7 +440,7 @@ int main(void)
 	init();
 
 	// Check to see if we should startup in straight key mode
-	for (uint8_t i = 0; i < DEBOUNCE_TIME + 10; i++)
+	for (uint8_t i = 0; i < DEBOUNCE_PRESS_TIME + 10; i++)
 		debounce();
 
 	if((dah_active == TRUE) && (dit_active == FALSE))
@@ -413,7 +448,7 @@ int main(void)
 	else
 		cur_mode = KEYER;
 
-	announce("NT7S");
+	announce("CC");
 
 	// Main event loop
 	while(1)
@@ -423,12 +458,6 @@ int main(void)
 		cli();
 		cur_timer = timer;
 		sei();
-
-		// Conserve power
-		power_adc_disable();
-		power_spi_disable();
-		power_twi_disable();
-		power_usart0_disable();
 
 		// Go to sleep
 		set_sleep_mode(SLEEP_MODE_IDLE);
@@ -487,7 +516,7 @@ int main(void)
 				break;
 			}
 			// Handle command button
-			if(cmd_active == TRUE)
+			if(cmd_btn == PRESS)
 				count_frequency();
 
 			break;
@@ -623,8 +652,20 @@ int main(void)
 			}
 
 			// Handle command button
-			if(cmd_active == TRUE)
+			if(cmd_btn == HOLD && msg_btn == HOLD)
+			{
+				cur_state = KEYDOWN;
+				prev_mode = cur_mode;
+				cur_mode = TUNE;
+			}
+
+			if(cmd_btn == PRESS)
 				count_frequency();
+			else if(cmd_btn == HOLD)
+				read_voltage();
+
+			if(msg_btn == PRESS)
+				read_voltage();
 
 			break;
 
@@ -724,6 +765,23 @@ int main(void)
 				break;
 			}
 			break;
+
+		case TUNE:
+			switch(cur_state)
+			{
+			case KEYDOWN:
+				key_down = TRUE;
+				sidetone_on = TRUE;
+				mute_on = TRUE;
+				tx_start = cur_timer + TX_ON_DELAY;
+				tx_end = cur_state_end;
+				mute_start = cur_timer;
+				mute_end = UINT32_MAX;
+				break;
+
+			case ENDKEYDOWN:
+				break;
+			}
 
 		default:
 			break;

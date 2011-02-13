@@ -1,5 +1,5 @@
 G04 FreePCB version 1.359*
-G04 Z:\home\jason\Ubuntu One\Project X\CC\CAM\board_outline.grb*
+G04 Z:\home\jason\Ubuntu One\Etherkit\git\CC-Series\pcb\CAM\board_outline.grb*
 G04 board outline layer *
 G04 Scale: 100 percent, Rotated: No, Reflected: No *
 %FSLAX24Y24*%
@@ -306,6 +306,7 @@ G04 Draw part J2*
 G04 Draw part J4*
 G04 Draw part J6*
 G04 Draw part J5*
+G04 Draw part C106*
 G04 Draw part H1*
 G04 Draw part H2*
 G04 Draw part H3*

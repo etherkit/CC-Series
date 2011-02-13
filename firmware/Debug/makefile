@@ -30,41 +30,59 @@ endif
 
 # Add inputs and outputs from these tool invocations to the build variables 
 LSS += \
-avrtest.lss \
+cc-series.lss \
+
+FLASH_IMAGE += \
+cc-series.hex \
+
+EEPROM_IMAGE += \
+cc-series.eep \
 
 SIZEDUMMY += \
 sizedummy \
 
 
 # All Target
-all: avrtest.elf secondary-outputs
+all: cc-series.elf secondary-outputs
 
 # Tool invocations
-avrtest.elf: $(OBJS) $(USER_OBJS)
+cc-series.elf: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: AVR C Linker'
-	avr-gcc -Wl,-Map,avrtest.map -mmcu=atmega168 -o"avrtest.elf" $(OBJS) $(USER_OBJS) $(LIBS)
+	avr-gcc -Wl,-Map,cc-series.map -mmcu=atmega168 -o"cc-series.elf" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
-avrtest.lss: avrtest.elf
+cc-series.lss: cc-series.elf
 	@echo 'Invoking: AVR Create Extended Listing'
-	-avr-objdump -h -S avrtest.elf  >"avrtest.lss"
+	-avr-objdump -h -S cc-series.elf  >"cc-series.lss"
 	@echo 'Finished building: $@'
 	@echo ' '
 
-sizedummy: avrtest.elf
+cc-series.hex: cc-series.elf
+	@echo 'Create Flash image (ihex format)'
+	-avr-objcopy -R .eeprom -O ihex cc-series.elf  "cc-series.hex"
+	@echo 'Finished building: $@'
+	@echo ' '
+
+cc-series.eep: cc-series.elf
+	@echo 'Create eeprom image (ihex format)'
+	-avr-objcopy -j .eeprom --no-change-warnings --change-section-lma .eeprom=0 -O ihex cc-series.elf  "cc-series.eep"
+	@echo 'Finished building: $@'
+	@echo ' '
+
+sizedummy: cc-series.elf
 	@echo 'Invoking: Print Size'
-	-avr-size --format=avr --mcu=atmega168 avrtest.elf
+	-avr-size --format=avr --mcu=atmega168 cc-series.elf
 	@echo 'Finished building: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS)$(C_DEPS)$(ASM_DEPS)$(ELFS)$(LSS)$(S_DEPS)$(SIZEDUMMY)$(S_UPPER_DEPS) avrtest.elf
+	-$(RM) $(OBJS)$(C_DEPS)$(ASM_DEPS)$(EEPROM_IMAGE)$(FLASH_IMAGE)$(ELFS)$(LSS)$(S_DEPS)$(SIZEDUMMY)$(S_UPPER_DEPS) cc-series.elf
 	-@echo ' '
 
-secondary-outputs: $(LSS) $(SIZEDUMMY)
+secondary-outputs: $(LSS) $(FLASH_IMAGE) $(EEPROM_IMAGE) $(SIZEDUMMY)
 
 .PHONY: all clean dependents
 .SECONDARY:
