@@ -1,0 +1,12 @@
+4.9152 MHz 18 pF
+
+Digi-Key P/N: 535-10206-1-ND
+Mfg P/N: ABLS-4.9152MHZ-B4-T
+
+Fc: 4914560 Hz
+BW: 119 Hz
+Rs: 23.6 ohms
+Qu: 210000
+Cm: 6.533 fF
+Lm: 160.5 mH
+C0: 2.0 pF
