@@ -1,11 +1,11 @@
-#Sat Feb 12 21:07:40 PST 2011
+#Sat Jul 16 17:17:42 PDT 2011
 avrtarget/ClockFrequency=16000000
 avrtarget/ExtRAMSize=0
 avrtarget/ExtendedRAM=false
 avrtarget/MCUType=atmega168
 avrtarget/UseEEPROM=false
 avrtarget/UseExtendedRAMforHeap=true
-avrtarget/avrdude/BitBangDelay=
+avrtarget/avrdude/BitBangDelay=10
 avrtarget/avrdude/Bitclock=
 avrtarget/avrdude/EEPROMFile=
 avrtarget/avrdude/EEPROMFromConfig=true
@@ -23,7 +23,7 @@ avrtarget/avrdude/NoWrite=false
 avrtarget/avrdude/OtherOptions=
 avrtarget/avrdude/ProgrammerID=programmerconfig.2
 avrtarget/avrdude/UseCounter=false
-avrtarget/avrdude/WriteEEPROM=false
+avrtarget/avrdude/WriteEEPROM=true
 avrtarget/avrdude/WriteFlash=true
 avrtarget/perConfig=false
 eclipse.preferences.version=1

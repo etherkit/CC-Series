@@ -1,4 +1,5 @@
 4.9152 MHz 18 pF
+================
 
 Digi-Key P/N: 535-10206-1-ND
 Mfg P/N: ABLS-4.9152MHZ-B4-T
@@ -6,7 +7,36 @@ Mfg P/N: ABLS-4.9152MHZ-B4-T
 Fc: 4914560 Hz
 BW: 119 Hz
 Rs: 23.6 ohms
+C0: 2.0 pF
 Qu: 210000
 Cm: 6.533 fF
 Lm: 160.5 mH
-C0: 2.0 pF
+
+
+11.059 MHz 18 pF
+================
+
+Digi-Key P/N: 535-10217-1-ND
+Mfg P/N: ABLS-11.0592MHZ-B4-T
+
+Fc: 11056100 Hz
+BW: 1090 Hz
+Rs: 28.6 ohms
+C0: 2.6 pF
+Qu: 42558
+Cm: 11.824 fF
+Lm: 17.5 mH
+
+6.144 MHz 18 pF
+===============
+
+Mouser P/N: 815-ABLS-6.144M-T
+Mfg P/N: ABLS-6.144MHZ-B4-T
+
+Fc: 6142880 Hz
+BW: 206 Hz
+Rs: 28.6 ohms
+C0: 1.9 pF
+Qu: 125118
+Cm: 7.238 fF
+Lm: 92.7 mH
