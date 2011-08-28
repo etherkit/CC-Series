@@ -16,7 +16,7 @@ download a copy.-->
 			<ORGANISATION>Etherkit</ORGANISATION>
 			<SHEETS>1 of 2</SHEETS>
 			<SHOWS>3</SHOWS>
-			<DATE>22 Aug 2011</DATE>
+			<DATE>27 Aug 2011</DATE>
 			<GRID spacing='50.00000' snap='1'/>
 		</DETAILS>
 		<FONT id='1'>
@@ -70,6 +70,16 @@ download a copy.-->
 			<FACENAME>Arial</FACENAME>
 		</FONT>
 		<FONT id='7'>
+			<HEIGHT>-16</HEIGHT>
+			<WIDTH>7</WIDTH>
+			<WEIGHT>400</WEIGHT>
+			<ITALIC>0</ITALIC>
+			<UNDERLINE>0</UNDERLINE>
+			<STRIKEOUT>0</STRIKEOUT>
+			<CHARSET>0</CHARSET>
+			<FACENAME>Arial</FACENAME>
+		</FONT>
+		<FONT id='8'>
 			<HEIGHT>-16</HEIGHT>
 			<WIDTH>7</WIDTH>
 			<WEIGHT>400</WEIGHT>
@@ -2150,21 +2160,21 @@ download a copy.-->
 				<DEFAULT>5</DEFAULT>
 				<FT>000002</FT>
 				<VALUE></VALUE>
-				<POS>1.00000,1.#QNAN</POS>
+				<POS>1.00000,1.00000</POS>
 			</FIELD>
 			<FIELD>
 				<NAME>$$SPICE_EPILOG_PRIORITY</NAME>
 				<DEFAULT>5</DEFAULT>
 				<FT>000002</FT>
 				<VALUE></VALUE>
-				<POS>1.00000,1.#QNAN</POS>
+				<POS>1.00000,1.00000</POS>
 			</FIELD>
 			<FIELD>
 				<NAME>Package</NAME>
 				<DEFAULT>WSOT-23</DEFAULT>
 				<FT>000001</FT>
 				<VALUE></VALUE>
-				<POS>1.00000,1.#QNAN</POS>
+				<POS>1.00000,1.00000</POS>
 			</FIELD>
 			<REF_POINT power='0' part='0' pos='50.00000,16.00000'/>
 			<TinyCAD>
@@ -2207,21 +2217,21 @@ download a copy.-->
 				<DEFAULT>5</DEFAULT>
 				<FT>000002</FT>
 				<VALUE></VALUE>
-				<POS>1.00000,1.#QNAN</POS>
+				<POS>1.00000,1.00000</POS>
 			</FIELD>
 			<FIELD>
 				<NAME>$$SPICE_EPILOG_PRIORITY</NAME>
 				<DEFAULT>5</DEFAULT>
 				<FT>000002</FT>
 				<VALUE></VALUE>
-				<POS>1.00000,1.#QNAN</POS>
+				<POS>1.00000,1.00000</POS>
 			</FIELD>
 			<FIELD>
 				<NAME>Package</NAME>
 				<DEFAULT>package name for PCB layout</DEFAULT>
 				<FT>000001</FT>
 				<VALUE></VALUE>
-				<POS>1.00000,1.#QNAN</POS>
+				<POS>1.00000,1.00000</POS>
 			</FIELD>
 			<REF_POINT power='0' part='0' pos='180.00000,90.00000'/>
 			<TinyCAD>
@@ -3861,7 +3871,7 @@ download a copy.-->
 		<WIRE a='134.00000,20.00386' b='134.00000,19.00386'/>
 		<JUNCTION pos='78.00000,175.00000'/>
 		<SYMBOL id='19' pos='77.00000,179.00000' part='0' rotate='3' can_scale='0' show_power='0' scale_x='1.00000' scale_y='1.00000'>
-			<FIELD type='0' description='Ref' value='R50' show='1' pos='-6.00000,-6.00000'/>
+			<FIELD type='0' description='Ref' value='R51' show='1' pos='-6.00000,-6.00000'/>
 			<FIELD type='0' description='Name' value='22 k' show='1' pos='-6.00000,-3.00000'/>
 			<FIELD type='2' description='$$SPICE_PROLOG_PRIORITY' value='5' show='0' pos='0.00000,0.00000'/>
 			<FIELD type='2' description='$$SPICE_EPILOG_PRIORITY' value='5' show='0' pos='0.00000,0.00000'/>
@@ -3877,6 +3887,7 @@ download a copy.-->
 		<WIRE a='83.00000,178.00000' b='85.00000,178.00000'/>
 		<JUNCTION pos='83.00000,178.00000'/>
 		<WIRE a='76.99614,178.00000' b='83.00000,178.00000'/>
+		<TEXT pos='43.00000,136.00000' direction='3' font='8' color='000000'>Preamp</TEXT>
 	</TinyCAD>
 	<TinyCAD>
 		<NAME>Microcontroller/DDS</NAME>
@@ -3890,7 +3901,7 @@ download a copy.-->
 			<ORGANISATION>Etherkit</ORGANISATION>
 			<SHEETS>2 of 2</SHEETS>
 			<SHOWS>3</SHOWS>
-			<DATE>22 Aug 2011</DATE>
+			<DATE>27 Aug 2011</DATE>
 			<GRID spacing='50.00000' snap='1'/>
 		</DETAILS>
 		<FONT id='1'>
@@ -5274,7 +5285,7 @@ download a copy.-->
 				<RECTANGLE a='46.00000,29.00000' b='50.00000,31.00000' style='3' fill='0'/>
 			</TinyCAD>
 		</SYMBOLDEF>
-		<SYMBOLDEF id='24'>
+		<SYMBOLDEF id='23'>
 			<NAME type='0'>POT</NAME>
 			<REF type='0'>R?</REF>
 			<DESCRIPTION>Small Var. Resistor</DESCRIPTION>
@@ -5284,21 +5295,21 @@ download a copy.-->
 				<DEFAULT>5</DEFAULT>
 				<FT>000002</FT>
 				<VALUE></VALUE>
-				<POS>1.00000,1.#QNAN</POS>
+				<POS>1.00000,1.00000</POS>
 			</FIELD>
 			<FIELD>
 				<NAME>$$SPICE_EPILOG_PRIORITY</NAME>
 				<DEFAULT>5</DEFAULT>
 				<FT>000002</FT>
 				<VALUE></VALUE>
-				<POS>1.00000,1.#QNAN</POS>
+				<POS>1.00000,1.00000</POS>
 			</FIELD>
 			<FIELD>
 				<NAME>Package</NAME>
 				<DEFAULT>package name for PCB layout</DEFAULT>
 				<FT>000001</FT>
 				<VALUE></VALUE>
-				<POS>1.00000,1.#QNAN</POS>
+				<POS>1.00000,1.00000</POS>
 			</FIELD>
 			<REF_POINT power='0' part='0' pos='180.00000,90.00000'/>
 			<TinyCAD>
@@ -5347,7 +5358,7 @@ download a copy.-->
 				</POLYGON>
 			</TinyCAD>
 		</SYMBOLDEF>
-		<SYMBOLDEF id='25'>
+		<SYMBOLDEF id='24'>
 			<NAME type='0'>AD9833</NAME>
 			<REF type='0'>U?</REF>
 			<DESCRIPTION>AD9833</DESCRIPTION>
@@ -5357,21 +5368,21 @@ download a copy.-->
 				<DEFAULT>5</DEFAULT>
 				<FT>000002</FT>
 				<VALUE></VALUE>
-				<POS>1.#QNAN,1.#QNAN</POS>
+				<POS>1.00000,1.#QNAN</POS>
 			</FIELD>
 			<FIELD>
 				<NAME>$$SPICE_EPILOG_PRIORITY</NAME>
 				<DEFAULT>5</DEFAULT>
 				<FT>000002</FT>
 				<VALUE></VALUE>
-				<POS>1.#QNAN,1.#QNAN</POS>
+				<POS>1.00000,1.#QNAN</POS>
 			</FIELD>
 			<FIELD>
 				<NAME>Package</NAME>
 				<DEFAULT>package name for PCB layout</DEFAULT>
 				<FT>000001</FT>
 				<VALUE></VALUE>
-				<POS>1.#QNAN,1.#QNAN</POS>
+				<POS>1.00000,1.#QNAN</POS>
 			</FIELD>
 			<REF_POINT power='0' part='0' pos='85.00000,64.00000'/>
 			<TinyCAD>
@@ -5415,7 +5426,7 @@ download a copy.-->
 			<FIELD type='2' description='$$SPICE_EPILOG_PRIORITY' value='5' show='0' pos='0.00000,0.00000'/>
 			<FIELD type='1' description='Package' value='SOT23/5L' show='0' pos='1.00000,-14.20000'/>
 		</SYMBOL>
-		<SYMBOL id='25' pos='75.00000,177.00000' part='0' rotate='0' can_scale='0' show_power='0' scale_x='1.00000' scale_y='1.00000'>
+		<SYMBOL id='24' pos='75.00000,177.00000' part='0' rotate='0' can_scale='0' show_power='0' scale_x='1.00000' scale_y='1.00000'>
 			<FIELD type='0' description='Ref' value='U7' show='1' pos='-17.00000,-20.60000'/>
 			<FIELD type='0' description='Name' value='AD9833' show='1' pos='-17.00000,-18.00000'/>
 			<FIELD type='1' description='Package' value='MSOP-10' show='0' pos='1.00000,-9.20000'/>
@@ -5450,7 +5461,7 @@ download a copy.-->
 			<FIELD type='2' description='$$SPICE_EPILOG_PRIORITY' value='5' show='0' pos='0.00000,0.00000'/>
 			<FIELD type='1' description='Package' value='R0805' show='0' pos='-8.00000,4.40000'/>
 		</SYMBOL>
-		<SYMBOL id='24' pos='39.00000,111.00000' part='0' rotate='5' can_scale='0' show_power='0' scale_x='1.00000' scale_y='1.00000'>
+		<SYMBOL id='23' pos='39.00000,111.00000' part='0' rotate='5' can_scale='0' show_power='0' scale_x='1.00000' scale_y='1.00000'>
 			<FIELD type='0' description='Ref' value='R47' show='1' pos='1.00000,-5.60000'/>
 			<FIELD type='0' description='Name' value='5 k' show='1' pos='1.00000,-3.00000'/>
 			<FIELD type='1' description='Package' value='TRIM-PVZ3A' show='0' pos='1.00000,-1.20000'/>

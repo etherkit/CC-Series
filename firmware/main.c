@@ -159,7 +159,7 @@ volatile uint32_t tune_freq;
 
 // EEPROM variables
 uint8_t EEMEM ee_wpm = DEFAULT_WPM;
-char EEMEM ee_msg_mem_1[MSG_BUFFER_SIZE - 1] = "CQ CQ CQ DE NT7S NT7S K";
+char EEMEM ee_msg_mem_1[MSG_BUFFER_SIZE - 1] = "CQ CQ CQ DE N1FIY N1FIY K";
 
 // Function prototypes
 void set_wpm(uint8_t);
