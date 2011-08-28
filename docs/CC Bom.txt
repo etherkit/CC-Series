@@ -1,0 +1,80 @@
+====+  Parts List for CC-20  +====
+
+C20,C46                       2   1
+R24,R4                        2   1 k
+C58,C65                       2   1 u MLCC
+C53,C74                       2   10 pF
+R19,R32                       2   10
+R30,R31,R38                   3   10 k
+R8                            1   10 k pot
+C52,C59,C66,C68,C69,C70,
+C71,C8,C84                    9   10 nF
+C25,C5                        2   10 uF
+C11,C19,C32,C55,C81           5   100 p
+R26,R27,R37,R50               4   100
+R12,R16,R20,R25,R29,R3,
+R33,R35,R36,R39,R48          11   100 k
+C10,C14,C21,C24,C3,C30,
+C33,C35,C37,C38,C45,C47,
+C48,C57,C6,C61,C62,C7,
+C72,C76,C78,C79,C83,
+C9                           24   100 nF
+C1,C29,C34,C4                 4   100 uF
+C12,C13,C15,C16               4   150 pF
+X6                            1   16 MHz
+J7                            1   2.1 mm +12 V
+R13,R34                       2   2.2 k
+L5                            1   2.7 uH
+C28,C63,C64                   3   22 pF
+R22,R23,R42,R5,R51            5   22 k
+L11                           1   22 uH
+R14,R2                        2   220
+R6                            1   220 k
+C73                           1   220 uF
+L3                            1   220 uH
+C22,C23,C27,C49,C50,C75       6   27 pF
+C36                           1   270
+Q1,Q14,Q7,Q8                  4   2N7002
+J1,J5                         2   3.5 mm Stereo
+C77                           1   3.3 pF
+C31                           1   33
+R1,R28                        2   33
+R15,R18,R44,R45,R46           5   33 k
+C2,C26                        2   330 pF
+C82                           1   39 pF
+C39,C40,C41,C42,C43,C44       6   390 pF
+R21                           1   4.7 k
+C60,C67                       2   4.7 u MLCC
+T2,T3,T4,T5,T6                5   42IF123
+C51,C54,C80                   3   47 pF
+R10,R49,R7                    3   47
+R11,R41,R43                   3   47 k
+R17,R40,R9                    3   470
+R47                           1   5 k trimpot
+X1,X2,X3,X4,X5                5   6.144 MHz
+C18,C56                       2   65 trim
+C17                           1   68
+U7                            1   AD9833
+U5                            1   ATmega168
+J6                            1   AVR ISP
+Q13,Q2,Q4                     3   BF998
+L1,L10,L12                    3   BN2402-43 5T
+J2                            1   BNC
+Q11,Q9                        2   BS170
+D7                            1   BZV55
+J4                            1   Blue LED
+S3                            1   Bournes PEC11-4220F-S00
+S1,S2                         1   Momentary SPST
+L6,T1                         1   FT37-43
+L2,L4                         1   FT37-61
+D8                            1   GS1M
+D1,D2,D3,D4,D5,D6             6   LL4148
+U6                            1   LP2985-3.3
+U4                            1   LP2985-5
+U2                            1   MC33202
+Q10,Q12,Q15,Q3,Q5             5   MMBFJ310
+Q6                            1   MMBT4403
+U8                            1   KC2520B25.0000C10E00
+U3                            1   SN74LVC1G17
+L7,L8,L9,L13,L14              1   T37-2
+U1                            1   TS5A3157
