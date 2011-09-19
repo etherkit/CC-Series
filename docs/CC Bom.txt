@@ -1,11 +1,12 @@
 ====+  Parts List for CC-20  +====
 
-C20,C46                       2   1
+C46                           1   0.5 pF
+C20                           1   1 pF
 R24,R4                        2   1 k
 C58,C65                       2   1 u MLCC
 C53,C74                       2   10 pF
 R19,R32                       2   10
-R30,R31,R38                   3   10 k
+R31,R38                       2   10 k
 R8                            1   10 k pot
 C52,C59,C66,C68,C69,C70,
 C71,C8,C84                    9   10 nF
@@ -21,6 +22,7 @@ C72,C76,C78,C79,C83,
 C9                           24   100 nF
 C1,C29,C34,C4                 4   100 uF
 C12,C13,C15,C16               4   150 pF
+R30                           1   150
 X6                            1   16 MHz
 J7                            1   2.1 mm +12 V
 R13,R34                       2   2.2 k
@@ -75,6 +77,6 @@ U2                            1   MC33202
 Q10,Q12,Q15,Q3,Q5             5   MMBFJ310
 Q6                            1   MMBT4403
 U8                            1   KC2520B25.0000C10E00
-U3                            1   SN74LVC1G17
+U3                            1   SN74LVC1G34
 L7,L8,L9,L13,L14              1   T37-2
 U1                            1   TS5A3157
