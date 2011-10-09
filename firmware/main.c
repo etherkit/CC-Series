@@ -127,7 +127,7 @@ enum FREQREG {REG_0, REG_1};
 
 // Global variable defs
 uint16_t dit_length;
-uint8_t wpm, pwm_delay;
+uint8_t wpm, prev_wpm, pwm_delay;
 uint32_t cur_state_end, prev_state_end;
 enum STATE prev_state, cur_state, next_state;
 enum MODE prev_mode, cur_mode, default_mode;
@@ -168,7 +168,7 @@ char EEMEM ee_msg_mem_1[MSG_BUFFER_SIZE - 1] = "CQ CQ CQ DE NT7S NT7S K";
 void set_wpm(uint8_t);
 void init(void);
 void debounce(enum BOOL);
-void announce(char * msg, uint16_t freq);
+void announce(char * msg, uint16_t freq, uint8_t speed);
 void read_voltage(void);
 void count_frequency(void);
 void poll_buttons(void);
@@ -574,7 +574,7 @@ void debounce(enum BOOL flush)
 		allow_sleep = TRUE;
 }
 
-void announce(char * msg, uint16_t freq)
+void announce(char * msg, uint16_t freq, uint8_t speed)
 {
 	// Convert to uppercase
 	strupr(msg);
@@ -588,8 +588,11 @@ void announce(char * msg, uint16_t freq)
 	prev_mode = cur_mode;
 	prev_st_freq = st_freq;
 	st_freq = freq;
+	prev_wpm = wpm;
+	wpm = speed;
 
 	set_st_freq(st_freq);
+	set_wpm(wpm);
 
 	// Set into announce mode
 	cur_state = IDLE;
@@ -619,7 +622,7 @@ void read_voltage(void)
 	// Format for output
 	sprintf(vcc_out, "%dR%d", vcc / 10, vcc % 10);
 
-	announce(vcc_out, st_freq);
+	announce(vcc_out, st_freq, wpm);
 
 	free(vcc_out);
 }
@@ -632,7 +635,7 @@ void count_frequency(void)
 
 	// Format and output frequency
 	sprintf(freq_out, "%02uR%02u", (unsigned int)((tune_freq / 1000) % 100), (unsigned int)((tune_freq % 1000) / 10));
-	announce(freq_out, st_freq);
+	announce(freq_out, st_freq, wpm);
 
 	free(freq_out);
 }
@@ -674,7 +677,7 @@ void poll_buttons(void)
 			tune_step = DDS_20HZ;
 			tune_freq_step = 5;
 			debounce(TRUE);
-			announce("S", ST_LOW);
+			announce("S", ST_LOW, 25);
 		}
 		else
 		{
@@ -682,7 +685,7 @@ void poll_buttons(void)
 			tune_step = DDS_100HZ;
 			tune_freq_step = 25;
 			debounce(TRUE);
-			announce("S", ST_HIGH);
+			announce("S", ST_HIGH, 25);
 		}
 	}
 	else if(enc_btn == HOLD)
@@ -852,7 +855,7 @@ int main(void)
 	else
 		cur_mode = KEYER;
 
-	announce("CC", st_freq);
+	announce("CC", st_freq, 15);
 
 	// Main event loop
 	while(1)
@@ -1179,6 +1182,10 @@ int main(void)
 					// Set back into previous mode
 					st_freq = prev_st_freq;
 					set_st_freq(st_freq);
+
+					wpm = prev_wpm;
+					set_wpm(wpm);
+
 					cur_mode = prev_mode;
 					cur_state = prev_state;
 					cur_state_end = prev_state_end;
@@ -1281,7 +1288,7 @@ int main(void)
 				cur_state = MENUINPUT;
 
 				// Announce the menu item
-				announce(cur_menu, st_freq);
+				announce(cur_menu, st_freq, wpm);
 
 				free(cur_menu);
 				break;
@@ -1305,7 +1312,7 @@ int main(void)
 							cur_mode = default_mode;
 
 							//set_st_freq(ST_LOW);
-							announce("X", ST_LOW);
+							announce("X", ST_LOW, wpm);
 						}
 						else
 							cur_state = MENUANNOUNCE;
@@ -1323,7 +1330,7 @@ int main(void)
 							cur_state_end = cur_timer + MENU_EXPIRATION;
 							cur_mode = SETWPM;
 
-							announce("R", st_freq);
+							announce("R", st_freq, wpm);
 							break;
 
 						// Read WPM
@@ -1332,7 +1339,7 @@ int main(void)
 							cur_mode = default_mode;
 
 							sprintf(text_buffer, "%d", wpm);
-							announce(text_buffer, st_freq);
+							announce(text_buffer, st_freq, wpm);
 							break;
 
 						// Record keyer memory
@@ -1340,7 +1347,7 @@ int main(void)
 							cur_state = INIT;
 							cur_mode = RECORD;
 
-							announce("R", st_freq);
+							announce("R", st_freq, wpm);
 							break;
 
 						// Read voltage
@@ -1359,7 +1366,7 @@ int main(void)
 								cur_state = IDLE;
 								cur_mode = default_mode;
 
-								announce("S", st_freq);
+								announce("S", st_freq, wpm);
 							}
 							else
 							{
@@ -1367,7 +1374,7 @@ int main(void)
 								cur_state = IDLE;
 								cur_mode = default_mode;
 
-								announce("P", st_freq);
+								announce("P", st_freq, wpm);
 							}
 							break;
 
@@ -1383,7 +1390,7 @@ int main(void)
 
 					// Send "X" to indicate expiration
 					//set_st_freq(ST_LOW);
-					announce("X", ST_LOW);
+					announce("X", ST_LOW, wpm);
 				}
 
 				free(text_buffer);
@@ -1405,7 +1412,7 @@ int main(void)
 						wpm++;
 					set_wpm(wpm);
 					cur_state_end = cur_timer + MENU_EXPIRATION;
-					announce("I", st_freq);
+					announce("I", st_freq, wpm);
 				}
 				else if(msg_btn == PRESS)
 				{
@@ -1413,7 +1420,7 @@ int main(void)
 						wpm--;
 					set_wpm(wpm);
 					cur_state_end = cur_timer + MENU_EXPIRATION;
-					announce("I", st_freq);
+					announce("I", st_freq, wpm);
 				}
 			}
 			else // done setting WPM, announce current setting
@@ -1425,7 +1432,7 @@ int main(void)
 				cur_mode = default_mode;
 
 				sprintf(text_buffer, "%d", wpm);
-				announce(text_buffer, st_freq);
+				announce(text_buffer, st_freq, wpm);
 			}
 			break;
 
@@ -1740,7 +1747,7 @@ int main(void)
 
 					// Indicate an error
 					//set_st_freq(ST_LOW);
-					announce("X", ST_LOW);
+					announce("X", ST_LOW, wpm);
 				}
 
 				cur_state = IDLE;
@@ -1758,7 +1765,7 @@ int main(void)
 				cur_mode = default_mode;
 
 				// Announce successful recording
-				announce("R", st_freq);
+				announce("R", st_freq, wpm);
 				break;
 
 			default:
