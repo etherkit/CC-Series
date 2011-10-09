@@ -1,0 +1,8 @@
+(gerbv-file-version! "2.0A")
+(define-layer! 4 (cons 'filename "drill_file.drl")(cons 'visible #t)(cons 'color #(65535 32639 29555))(cons 'attribs (list (list 'autodetect 'Boolean 1) (list 'zero_supression 'Enum 0) (list 'units 'Enum 0) (list 'digits 'Integer 4))))
+(define-layer! 3 (cons 'filename "top_copper.grb")(cons 'visible #f)(cons 'color #(49601 0 57568)))
+(define-layer! 2 (cons 'filename "top_solder_mask.grb")(cons 'visible #t)(cons 'color #(2620 9521 33401)))
+(define-layer! 1 (cons 'filename "top_silk.grb")(cons 'visible #t)(cons 'color #(14028 4952 27650)))
+(define-layer! 0 (cons 'filename "board_outline.grb")(cons 'visible #t)(cons 'color #(0 0 0)))
+(define-layer! -1 (cons 'filename "/home/jason/Ubuntu One/Etherkit/git/CC-Series/pcb/CAM")(cons 'visible #f)(cons 'color #(65535 65535 65535)))
+(set-render-type! 3)
