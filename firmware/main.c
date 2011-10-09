@@ -88,6 +88,7 @@
 
 // Constant defines
 #define TIMER2_COUNT			249			// 4 us clk period * 250 ticks (0-249)= 1 ms Timer2 CTC A overflow
+//#define TIMER2_COUNT			124
 #define DEBOUNCE_PRESS_TIME		5			// Amount of captures for press keybounce (in 1 ms increments)
 #define DEBOUNCE_HOLD_TIME		800			// Amount of captures for hold keybounce (in 1 ms increments)
 #define DEFAULT_WPM				13			// Default keyer WPM
@@ -141,6 +142,7 @@ uint8_t tune_freq_step = 25;
 volatile uint32_t timer, cur_timer;
 //volatile uint16_t fc_ovf, fc_count, fc_period;
 volatile uint8_t ind;
+volatile uint8_t port_b_latch, port_d_latch;
 volatile unsigned long freq;
 volatile enum BOOL sidetone_on = FALSE;
 volatile enum BOOL mute_on = FALSE;
@@ -150,8 +152,8 @@ volatile enum BOOL dit_active, dah_active;
 volatile enum BOOL allow_sleep = TRUE;
 volatile enum BTN cmd_btn, msg_btn, both_btn, enc_btn;
 volatile enum BOOL enc_a, enc_b;
-volatile enum BOOL rit_enable = FALSE;
-volatile uint32_t tx_start, tx_end, mute_start, mute_end, fc_count_end;
+volatile enum BOOL rit_enable;
+volatile uint32_t tx_start, tx_end, mute_start, mute_end;
 volatile uint32_t st_phase_acc, st_tune_word;
 volatile uint8_t st_sine_lookup;
 volatile uint32_t dds_freq_word, dds_rit_freq_word;
@@ -159,7 +161,7 @@ volatile uint32_t tune_freq;
 
 // EEPROM variables
 uint8_t EEMEM ee_wpm = DEFAULT_WPM;
-char EEMEM ee_msg_mem_1[MSG_BUFFER_SIZE - 1] = "CQ CQ CQ DE AA7EE AA7EE K";
+char EEMEM ee_msg_mem_1[MSG_BUFFER_SIZE - 1] = "CQ CQ CQ DE NT7S NT7S K";
 
 // Function prototypes
 void set_wpm(uint8_t);
@@ -172,6 +174,7 @@ void poll_buttons(void);
 void tune_dds(uint32_t, enum FREQREG);
 void init_dds(uint32_t, enum FREQREG);
 void send_dds_word(uint16_t);
+void set_dds_freq_reg(enum FREQREG reg);
 void set_st_freq(uint32_t);
 
 
@@ -183,28 +186,32 @@ ISR(TIMER0_OVF_vect)
 {
 	if(sidetone_on == TRUE)
 	{
-		SIDETONE_DDR |= _BV(SIDETONE);
+		//SIDETONE_DDR |= _BV(SIDETONE);
 
 		st_phase_acc = st_phase_acc + st_tune_word;
 		st_sine_lookup = (uint8_t)(st_phase_acc >> 24);
-		OCR0A = pgm_read_byte(&sinewave[st_sine_lookup]); // Just use the upper 8 bits for sine lookup
+		OCR0A = pgm_read_byte_near(&sinewave[st_sine_lookup]); // Just use the upper 8 bits for sine lookup
 	}
+	/*
 	else
 	{
 		// Hi-Z the port when not using
 		SIDETONE_DDR &= ~(_BV(SIDETONE));
 		OCR0A = 0;
 	}
+	*/
 }
 
 // Timer1 ISR
 //
 // Timer1 is used as the frequency counter. The only thing we need to do during this ISR is
 // capture the number of timer overflows as a "17th bit" for the counter.
+/*
 ISR(TIMER1_OVF_vect)
 {
 	//fc_ovf++;
 }
+*/
 
 // Timer2 ISR
 //
@@ -214,8 +221,6 @@ ISR(TIMER2_COMPA_vect)
 {
 	/*
 	uint8_t sreg;
-
-	cli();
 
 	fc_period++;
 
@@ -233,8 +238,6 @@ ISR(TIMER2_COMPA_vect)
 	}
 	*/
 
-	cli();
-
 	// Handle mute
 	if(((timer > mute_start) && (timer < mute_end)) || (mute_on == TRUE))
 		MUTE_PORT |= _BV(MUTE);
@@ -242,55 +245,35 @@ ISR(TIMER2_COMPA_vect)
 		MUTE_PORT &= ~(_BV(MUTE));
 
 	// Switch frequency registers based on RIT
+	/*
 	if(key_down == TRUE)
 	{
 		if(rit_enable == TRUE)
-		{
-			// Switch to DDS frequency reg 1
-			// 0x0800
-			/*
-			SPI_PORT |= _BV(SPI_SCK);
-			SPI_PORT &= ~(_BV(SPI_FSYNC));
-			SPDR = (uint8_t)((0x2800 >> 8) & 0xFF);
-			while(!(SPSR & (1<<SPIF)));
-			SPDR = (uint8_t)(0x2800 & 0xFF);
-			while(!(SPSR & (1<<SPIF)));
-			SPI_PORT |= _BV(SPI_FSYNC);
-			*/
-			tune_dds(dds_rit_freq_word, REG_1);
-		}
+			set_dds_freq_reg(REG_1);
 		else
-		{
-			// Switch to DDS frequency reg 0
-			// 0x0000
-			/*
-			SPI_PORT |= _BV(SPI_SCK);
-			SPI_PORT &= ~(_BV(SPI_FSYNC));
-			SPDR = (uint8_t)((0x2000 >> 8) & 0xFF);
-			while(!(SPSR & (1<<SPIF)));
-			SPDR = (uint8_t)(0x2000 & 0xFF);
-			while(!(SPSR & (1<<SPIF)));
-			SPI_PORT |= _BV(SPI_FSYNC);
-			*/
-			tune_dds(dds_freq_word, REG_0);
-		}
+			set_dds_freq_reg(REG_0);
 	}
+	else
+		set_dds_freq_reg(REG_0);
+		*/
 
 	// Handle transmit
 	if((key_down == TRUE) && (timer < tx_end) && (timer > tx_start))
 	{
+		if(rit_enable == TRUE)
+			set_dds_freq_reg(REG_1);
 		TX_PORT |= _BV(TX);
 	}
 	else
 	{
+		set_dds_freq_reg(REG_0);
 		TX_PORT &= ~(_BV(TX));
 	}
 
-	// Need to consider timer overflow?
-	timer++;
-
 	debounce(FALSE);
 
+	// Need to consider timer overflow?
+	timer++;
 }
 
 // Just needed to wake up on pin change
@@ -322,15 +305,18 @@ void init(void)
 	TIMSK0 |= _BV(TOIE0); // Enable Timer0 CTC overflow interrupt
 
 	// Setup Timer1 as frequency counter (stopped for now)
+	/*
 	TCCR1A = 0; // Normal mode
 	//TCCR1B = 0; // No counting for now
 	TCCR1B = _BV(CS12) | _BV(CS11) | _BV(CS10); // Ext. clock source on T1, rising edge
 	TIMSK1 = _BV(TOIE1); // Enable overflow interrupt
+	*/
 
 	// Setup Timer2 as main event timer, 4 us tick
 	TCCR2A = _BV(WGM21); // Set for CTC mode
 	//TCCR2B = _BV(CS21) | _BV(CS20); // Prescaler /32 for 8 MHz clock
 	TCCR2B = _BV(CS22); // Prescaler /64 for 16 MHz clock
+	//TCCR2B = _BV(CS22) | _BV(CS20);
 	TIMSK2 |= _BV(OCIE2A); // Enable Timer2 CTC interrupt
 	OCR2A = TIMER2_COUNT; // Timer2 CTC A value
 
@@ -348,7 +334,8 @@ void init(void)
 	SIDETONE_DDR |= _BV(SIDETONE);
 	MUTE_DDR |= _BV(MUTE);
 	TX_DDR |= _BV(TX);
-	RIT_LED_DDR |= _BV(RIT_LED);
+	RIT_LED_DDR &= ~(_BV(RIT_LED));
+	RIT_LED_PORT &= ~(_BV(RIT_LED));
 
 	// Configure input ports
 	PADDLE_DIT_DDR &= ~(_BV(PADDLE_DIT));
@@ -389,14 +376,21 @@ void init(void)
 	prev_state = IDLE;
 	cur_state = IDLE;
 	next_state = IDLE;
+
 	timer = 0;
+
 	eeprom_busy_wait();
 	wpm = eeprom_read_byte(&ee_wpm);
 	set_wpm(wpm);
-	 //dds_freq_word = 0x05DA5119;
+
+	//dds_freq_word = 0x05DA5119;
 	dds_freq_word = 0x05111F0C;
 	tune_freq = 14060000;
+	init_dds(dds_freq_word, REG_0);
+	tune_dds(dds_freq_word, REG_1);
 	set_st_freq(ST_DEFAULT);
+
+	rit_enable = FALSE;
 
 	// Enable interrupts
 	sei();
@@ -686,20 +680,23 @@ void poll_buttons(void)
 	}
 	else if(enc_btn == HOLD)
 	{
-		if(rit_enable == TRUE)
+		if(rit_enable == FALSE)
 		{
+			RIT_LED_DDR |= _BV(RIT_LED);
 			RIT_LED_PORT |= _BV(RIT_LED);
-			rit_enable = FALSE;
-			dds_freq_word = dds_rit_freq_word;
-			tune_dds(dds_freq_word, REG_0);
+			rit_enable = TRUE;
+			dds_rit_freq_word = dds_freq_word;
+			tune_dds(dds_rit_freq_word, REG_1);
 			debounce(TRUE);
 		}
 		else
 		{
+
+			RIT_LED_DDR &= ~(_BV(RIT_LED));
 			RIT_LED_PORT &= ~(_BV(RIT_LED));
-			rit_enable = TRUE;
-			dds_rit_freq_word = dds_freq_word;
-			tune_dds(dds_rit_freq_word, REG_1);
+			rit_enable = FALSE;
+			dds_freq_word = dds_rit_freq_word;
+			tune_dds(dds_freq_word, REG_0);
 			debounce(TRUE);
 		}
 	}
@@ -750,10 +747,10 @@ void tune_dds(uint32_t dds_word, enum FREQREG reg)
 	dds_word_high = (uint16_t)(((dds_word >> 14) & 0x3FFF) + freq_reg);
 
 	// Control register
-	if(reg == REG_1)
-		send_dds_word(0x2800);
-	else
-		send_dds_word(0x2000);
+	//if(reg == REG_1)
+		//send_dds_word(0x2800);
+	//else
+		//send_dds_word(0x2000);
 
 	// Send frequency word LSB
 	send_dds_word(dds_word_low);
@@ -775,10 +772,10 @@ void init_dds(uint32_t dds_word, enum FREQREG reg)
 	dds_word_high = (uint16_t)(((dds_word >> 14) & 0x3FFF) + freq_reg);
 
 	// Control register
-	if(reg == REG_1)
-		send_dds_word(0x2800);
-	else
-		send_dds_word(0x2000);
+	//if(reg == REG_1)
+		//send_dds_word(0x2900);
+	//else
+		send_dds_word(0x2100);
 
 	// Send frequency word LSB
 	send_dds_word(dds_word_low);
@@ -802,6 +799,15 @@ void send_dds_word(uint16_t dds_word)
 	SPDR = (uint8_t)(dds_word & 0xFF);
 	while(!(SPSR & (1<<SPIF)));
 	SPI_PORT |= _BV(SPI_FSYNC);
+}
+
+void set_dds_freq_reg(enum FREQREG reg)
+{
+	// Control register
+	if(reg == REG_1)
+		send_dds_word(0x2800);
+	else
+		send_dds_word(0x2000);
 }
 
 void set_st_freq(uint32_t st_freq)
@@ -841,10 +847,6 @@ int main(void)
 
 	announce("CC");
 
-	// Set the initial VFO frequency
-	init_dds(dds_freq_word, REG_0);
-	tune_dds(dds_freq_word, REG_0);
-
 	// Main event loop
 	while(1)
 	{
@@ -853,7 +855,6 @@ int main(void)
 		cli();
 		cur_timer = timer;
 		sei();
-
 
 		// Handle the current mode
 		switch(cur_mode)
@@ -913,6 +914,7 @@ int main(void)
 
 			poll_buttons();
 
+			/*
 			// Go to sleep
 			set_sleep_mode(SLEEP_MODE_PWR_DOWN);
 			cli();
@@ -926,11 +928,13 @@ int main(void)
 				sleep_disable();
 			}
 			sei();
+			*/
 
 			break;
 
 		case KEYER:
 			default_mode = KEYER;
+			poll_buttons();
 
 			// Handle KEYER state conditions
 			switch(cur_state)
@@ -990,6 +994,10 @@ int main(void)
 				break;
 
 			case DIT:
+				key_down = TRUE;
+				sidetone_on = TRUE;
+				mute_on = TRUE;
+
 				if(cur_timer > cur_state_end)
 				{
 					prev_state = DIT;
@@ -1002,9 +1010,6 @@ int main(void)
 				if((dah_active == TRUE) && (next_state == IDLE))
 					next_state = DAH;
 
-				key_down = TRUE;
-				sidetone_on = TRUE;
-				mute_on = TRUE;
 				break;
 
 			case DAH:
@@ -1082,7 +1087,7 @@ int main(void)
 				break;
 			}
 
-			poll_buttons();
+			//poll_buttons();
 
 			// Go to sleep
 			/*
