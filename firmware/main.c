@@ -101,9 +101,9 @@
 #define MENU_EXPIRATION			4000		// Menu expiration time (in 1 ms increments)
 #define REC_EXPIRATION			1000		// Keyer memory character record expiration
 #define MSG_BUFFER_SIZE			41			// Keyer message size in characters
-#define SLEEP_DELAY				5000		// Time (in ms) to delay before going to sleep because of inactivity
+#define SLEEP_DELAY				400		// Time (in ms) to delay before going to sleep because of inactivity
 #define ST_REFCLK				268435		// 16 MHz clock / 16 kHz sample rate
-#define ST_DEFAULT				600			// Default sidetone frequency
+#define ST_DEFAULT				500			// Default sidetone frequency
 #define ST_HIGH					900			// High sidetone frequency
 #define ST_LOW					400			// Low sidetone frequency
 
@@ -270,9 +270,8 @@ ISR(PCINT2_vect)
 	cur_state = IDLE;
 
 	// Needs some idle time to get up to speed
-	cur_state_end = cur_timer + 50;
+	cur_state_end = cur_timer + 100;
 	sleep_timer = cur_timer + SLEEP_DELAY;
-	//mute_on = TRUE;
 }
 
 void init(void)
@@ -318,7 +317,7 @@ void init(void)
 	// Setup pin change interrupts on paddle inputs and buttons
 	//PCMSK2 = _BV(PCINT18);
 	PCMSK0 = _BV(ENC_A_PC);
-	PCMSK2 = _BV(PADDLE_DIT_PC) | _BV(PADDLE_DAH_PC) | _BV(CMD_BUTTON_PC) | _BV(MSG_BUTTON_PC) | _BV(ENC_B_PC) | _BV(ENC_BUTTON_PC);
+	PCMSK2 = _BV(PADDLE_DIT_PC) | _BV(PADDLE_DAH_PC) | _BV(CMD_BUTTON_PC) | _BV(MSG_BUTTON_PC) |_BV(ENC_B_PC) | _BV(ENC_BUTTON_PC);
 	//PCICR = _BV(PCIE2);
 
 	// Configure output ports
@@ -642,15 +641,20 @@ void poll_buttons(void)
 		cur_state = IDLE;
 		prev_mode = cur_mode;
 		cur_mode = TUNE;
+		sleep_timer = cur_timer + SLEEP_DELAY;
 	}
 	else if(cmd_btn == PRESS)
 	{
 		prev_mode = cur_mode;
 		cur_mode = MENU;
 		cur_state = IDLE;
+		sleep_timer = cur_timer + SLEEP_DELAY;
 	}
 	else if(msg_btn == PRESS)
+	{
 		count_frequency();
+		sleep_timer = cur_timer + SLEEP_DELAY;
+	}
 	else if(msg_btn == HOLD)
 	{
 		// Playback message memory 1
@@ -659,6 +663,7 @@ void poll_buttons(void)
 		cur_state = IDLE;
 		prev_mode = cur_mode;
 		cur_mode = PLAYBACK;
+		sleep_timer = cur_timer + SLEEP_DELAY;
 	}
 
 	if(enc_btn == PRESS)
@@ -668,6 +673,7 @@ void poll_buttons(void)
 			tune_rate = SLOW;
 			tune_step = DDS_20HZ;
 			tune_freq_step = 5;
+			sleep_timer = cur_timer + SLEEP_DELAY;
 			debounce(TRUE);
 			announce("S", ST_LOW, 25);
 		}
@@ -676,6 +682,7 @@ void poll_buttons(void)
 			tune_rate = FAST;
 			tune_step = DDS_100HZ;
 			tune_freq_step = 25;
+			sleep_timer = cur_timer + SLEEP_DELAY;
 			debounce(TRUE);
 			announce("S", ST_HIGH, 25);
 		}
@@ -690,6 +697,7 @@ void poll_buttons(void)
 			dds_rit_freq_word = dds_freq_word;
 			tune_dds(dds_rit_freq_word, REG_1, FALSE);
 			debounce(TRUE);
+			sleep_timer = cur_timer + SLEEP_DELAY;
 		}
 		else
 		{
@@ -700,6 +708,7 @@ void poll_buttons(void)
 			dds_freq_word = dds_rit_freq_word;
 			tune_dds(dds_freq_word, REG_0, FALSE);
 			debounce(TRUE);
+			sleep_timer = cur_timer + SLEEP_DELAY;
 		}
 	}
 
@@ -716,6 +725,7 @@ void poll_buttons(void)
 	if(cur_enc_state != prev_enc_state)
 	{
 		prev_enc_state = (prev_enc_state >> 1) & 0x01;
+		sleep_timer = cur_timer + SLEEP_DELAY;
 
 		// Compare current B state to previous A state
 		if((prev_enc_state ^ (cur_enc_state & 0x01)) == 1)
@@ -992,12 +1002,7 @@ int main(void)
 				sidetone_on = FALSE;
 				mute_on = FALSE;
 				mute_end = cur_timer;
-				/*
-				if(allow_sleep == TRUE)
-					mute_on = FALSE;
-				else
-					mute_on = TRUE;
-				*/
+
 				// Dit paddle only
 				if((dit_active == TRUE) && (dah_active == FALSE))
 				{
@@ -1160,7 +1165,7 @@ int main(void)
 			}
 
 			// Go to sleep
-			set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+			set_sleep_mode(SLEEP_MODE_STANDBY);
 			cli();
 			if((cur_mode == KEYER) && (cur_state == IDLE) && (cur_timer > sleep_timer))
 			{
