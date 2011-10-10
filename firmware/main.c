@@ -101,6 +101,7 @@
 #define MENU_EXPIRATION			4000		// Menu expiration time (in 1 ms increments)
 #define REC_EXPIRATION			1000		// Keyer memory character record expiration
 #define MSG_BUFFER_SIZE			41			// Keyer message size in characters
+#define SLEEP_DELAY				5000		// Time (in ms) to delay before going to sleep because of inactivity
 #define ST_REFCLK				268435		// 16 MHz clock / 16 kHz sample rate
 #define ST_DEFAULT				600			// Default sidetone frequency
 #define ST_HIGH					900			// High sidetone frequency
@@ -133,7 +134,7 @@ enum FREQREG {REG_0, REG_1};
 // Global variable defs
 uint16_t dit_length;
 uint8_t wpm, prev_wpm, pwm_delay;
-uint32_t cur_state_end, prev_state_end;
+uint32_t cur_state_end, prev_state_end, sleep_timer;
 enum STATE prev_state, cur_state, next_state;
 enum MODE prev_mode, cur_mode, default_mode;
 char * announce_buffer;
@@ -269,7 +270,8 @@ ISR(PCINT2_vect)
 	cur_state = IDLE;
 
 	// Needs some idle time to get up to speed
-	cur_state_end = cur_timer + 20;
+	cur_state_end = cur_timer + 50;
+	sleep_timer = cur_timer + SLEEP_DELAY;
 	//mute_on = TRUE;
 }
 
@@ -605,9 +607,9 @@ void read_voltage(void)
 	// Get ADC value
 	vcc_mon = ADCH;
 
-	// Full scale reading at uC is 15.8 V
-	// We'll use fixed point numbers, so full scale is 158 * 0.1 V
-	vcc = (vcc_mon * 158) / 256;
+	// Full scale reading at uC is 16.1 V
+	// We'll use fixed point numbers, so full scale is 161 * 0.1 V
+	vcc = (vcc_mon * 161) / 256;
 
 	// Format for output
 	sprintf(vcc_out, "%dR%d", vcc / 10, vcc % 10);
@@ -893,6 +895,8 @@ int main(void)
 		{
 		case SK:
 			default_mode = SK;
+			poll_buttons();
+
 			switch(cur_state)
 			{
 			case IDLE:
@@ -960,13 +964,10 @@ int main(void)
 				break;
 			}
 
-			poll_buttons();
-
-			/*
 			// Go to sleep
 			set_sleep_mode(SLEEP_MODE_PWR_DOWN);
 			cli();
-			if((cur_mode == SK) && (cur_state == IDLE) && (cur_timer > cur_state_end) && (allow_sleep == TRUE))
+			if((cur_mode == KEYER) && (cur_state == IDLE) && (cur_timer > sleep_timer))
 			{
 				MUTE_PORT &= ~(_BV(MUTE));
 				PCICR = _BV(PCIE2);
@@ -976,7 +977,6 @@ int main(void)
 				sleep_disable();
 			}
 			sei();
-			*/
 
 			break;
 
@@ -1151,19 +1151,18 @@ int main(void)
 				{
 					cur_state = IDLE;
 				}
+
+				sleep_timer = cur_timer + SLEEP_DELAY;
 				break;
 
 			default:
 				break;
 			}
 
-			//poll_buttons();
-
 			// Go to sleep
-			/*
 			set_sleep_mode(SLEEP_MODE_PWR_DOWN);
 			cli();
-			if((cur_mode == KEYER) && (cur_state == IDLE) && (cur_timer > cur_state_end) && (allow_sleep == TRUE))
+			if((cur_mode == KEYER) && (cur_state == IDLE) && (cur_timer > sleep_timer))
 			{
 				MUTE_PORT &= ~(_BV(MUTE));
 				PCICR = _BV(PCIE2);
@@ -1173,7 +1172,6 @@ int main(void)
 				sleep_disable();
 			}
 			sei();
-			*/
 
 			break;
 
