@@ -102,7 +102,8 @@
 #define MENU_EXPIRATION			4000		// Menu expiration time (in 1 ms increments)
 #define REC_EXPIRATION			1000		// Keyer memory character record expiration
 #define MSG_BUFFER_SIZE			41			// Keyer message size in characters
-#define ST_REFCLK				136904		// 16 MHz clock / 510 (max PWM freq)
+#define ST_REFCLK				268435		// 16 MHz clock / 16 kHz sample rate
+//#define ST_REFCLK				268435
 #define ST_DEFAULT				600			// Default sidetone frequency
 #define ST_HIGH					900			// High sidetone frequency
 #define ST_LOW					400			// Low sidetone frequency
@@ -179,11 +180,10 @@ void set_dds_freq_reg(enum FREQREG reg);
 void set_st_freq(uint32_t);
 
 
-// Timer0 ISR
+// Timer1 ISR
 //
-// Timer0 does double duty as the PWM register and also as the sinewave generator during the
-// overflow ISR.
-ISR(TIMER0_OVF_vect)
+// Timer1 is the sinewave generator.
+ISR(TIMER1_COMPA_vect)
 {
 	if(sidetone_on == TRUE)
 	{
@@ -245,19 +245,6 @@ ISR(TIMER2_COMPA_vect)
 	else
 		MUTE_PORT &= ~(_BV(MUTE));
 
-	// Switch frequency registers based on RIT
-	/*
-	if(key_down == TRUE)
-	{
-		if(rit_enable == TRUE)
-			set_dds_freq_reg(REG_1);
-		else
-			set_dds_freq_reg(REG_0);
-	}
-	else
-		set_dds_freq_reg(REG_0);
-		*/
-
 	// Handle transmit
 	if((key_down == TRUE) && (timer < tx_end) && (timer > tx_start))
 	{
@@ -303,9 +290,15 @@ void init(void)
 	// Setup Timer0 as phase correct PWM
 	TCCR0A = _BV(COM0A1) | _BV(WGM00); // Set for Phase Correct PWM mode, output on OC0A
 	TCCR0B = _BV(CS00); // Prescaler /1
-	TIMSK0 |= _BV(TOIE0); // Enable Timer0 CTC overflow interrupt
+	//TCCR0B = _BV(CS01);
+	//TIMSK0 |= _BV(TOIE0); // Enable Timer0 CTC overflow interrupt
 
-	// Setup Timer1 as frequency counter (stopped for now)
+	// Setup Timer1 as sample rate generator for sidetone
+	TCCR1B = _BV(WGM12) | _BV(CS10); // Set for CTC mode, Prescaler /1
+	TCCR1A = 0;
+	OCR1A = 1000; // 16 MHz clock / 16 kHz sample rate = 1000
+	TIMSK1 = _BV(OCIE1A);
+
 	/*
 	TCCR1A = 0; // Normal mode
 	//TCCR1B = 0; // No counting for now
