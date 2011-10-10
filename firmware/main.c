@@ -15,7 +15,7 @@
 #include <avr/eeprom.h>
 #include <avr/sleep.h>
 #include <avr/power.h>
-#include <avr/wdt.h>
+//#include <avr/wdt.h>
 
 #include "morsechar.h"
 #include "sinewave.h"
@@ -88,7 +88,6 @@
 
 // Constant defines
 #define TIMER2_COUNT			249			// 4 us clk period * 250 ticks (0-249)= 1 ms Timer2 CTC A overflow
-//#define TIMER2_COUNT			124
 #define DEBOUNCE_PRESS_TIME		5			// Amount of captures for press keybounce (in 1 ms increments)
 #define DEBOUNCE_HOLD_TIME		500			// Amount of captures for hold keybounce (in 1 ms increments)
 #define DEFAULT_WPM				13			// Default keyer WPM
@@ -97,13 +96,12 @@
 #define TX_ON_DELAY				1			// TX sequence delay time (in 1 ms increments)
 #define MUTE_OFF_DELAY			100			// Mute off delay time (in 1 ms increments)
 #define ANNOUNCE_BUFFER_SIZE	41			// Buffer size for announce string
-#define IF_FREQ					4915000UL	// IF frequency
-#define FC_GATE_TIME			100 		// Frequency counter gate time (in 1 ms increments)
+//#define IF_FREQ					4915000UL	// IF frequency
+//#define FC_GATE_TIME			100 		// Frequency counter gate time (in 1 ms increments)
 #define MENU_EXPIRATION			4000		// Menu expiration time (in 1 ms increments)
 #define REC_EXPIRATION			1000		// Keyer memory character record expiration
 #define MSG_BUFFER_SIZE			41			// Keyer message size in characters
 #define ST_REFCLK				268435		// 16 MHz clock / 16 kHz sample rate
-//#define ST_REFCLK				268435
 #define ST_DEFAULT				600			// Default sidetone frequency
 #define ST_HIGH					900			// High sidetone frequency
 #define ST_LOW					400			// Low sidetone frequency
@@ -114,6 +112,12 @@
 #define DDS_50HZ				0x86
 #define DDS_100HZ				0x10C
 #define DDS_200HZ				0x218
+
+// Band constants
+#define DDS_INIT				0x05111F0C	// 14.060 MHz
+#define FREQ_INIT				14060000
+#define LOWER_FREQ_LIMIT		14000000
+#define UPPER_FREQ_LIMIT		14350000
 
 // Macro for any button press
 #define ANYBUTTON				(dit_active == TRUE) || (dah_active == TRUE) || (cmd_btn == PRESS) || (msg_btn == PRESS)
@@ -163,6 +167,7 @@ volatile uint32_t tune_freq;
 
 // EEPROM variables
 uint8_t EEMEM ee_wpm = DEFAULT_WPM;
+enum BOOL EEMEM ee_keyer = TRUE;
 char EEMEM ee_msg_mem_1[MSG_BUFFER_SIZE - 1] = "CQ CQ CQ DE NT7S NT7S K";
 
 // Function prototypes
@@ -173,8 +178,8 @@ void announce(char * msg, uint16_t freq, uint8_t speed);
 void read_voltage(void);
 void count_frequency(void);
 void poll_buttons(void);
-void tune_dds(uint32_t, enum FREQREG);
-void init_dds(uint32_t, enum FREQREG);
+void tune_dds(uint32_t dds_word, enum FREQREG reg, enum BOOL init);
+//void init_dds(uint32_t, enum FREQREG);
 void send_dds_word(uint16_t);
 void set_dds_freq_reg(enum FREQREG reg);
 void set_st_freq(uint32_t);
@@ -187,20 +192,10 @@ ISR(TIMER1_COMPA_vect)
 {
 	if(sidetone_on == TRUE)
 	{
-		//SIDETONE_DDR |= _BV(SIDETONE);
-
 		st_phase_acc = st_phase_acc + st_tune_word;
 		st_sine_lookup = (uint8_t)(st_phase_acc >> 24);
 		OCR0A = pgm_read_byte_near(&sinewave[st_sine_lookup]); // Just use the upper 8 bits for sine lookup
 	}
-	/*
-	else
-	{
-		// Hi-Z the port when not using
-		SIDETONE_DDR &= ~(_BV(SIDETONE));
-		OCR0A = 0;
-	}
-	*/
 }
 
 // Timer1 ISR
@@ -240,7 +235,7 @@ ISR(TIMER2_COMPA_vect)
 	*/
 
 	// Handle mute
-	if(((timer > mute_start) && (timer < mute_end)) || (mute_on == TRUE))
+	if(/*((timer > mute_start) && (timer < mute_end)) || */(mute_on == TRUE))
 		MUTE_PORT |= _BV(MUTE);
 	else
 		MUTE_PORT &= ~(_BV(MUTE));
@@ -378,10 +373,10 @@ void init(void)
 	set_wpm(wpm);
 
 	//dds_freq_word = 0x05DA5119;
-	dds_freq_word = 0x05111F0C;
-	tune_freq = 14060000;
-	init_dds(dds_freq_word, REG_0);
-	tune_dds(dds_freq_word, REG_1);
+	dds_freq_word = DDS_INIT;
+	tune_freq = FREQ_INIT;
+	tune_dds(dds_freq_word, REG_0, TRUE);
+	tune_dds(dds_freq_word, REG_1, FALSE);
 
 	st_freq = ST_DEFAULT;
 	set_st_freq(st_freq);
@@ -413,6 +408,8 @@ void debounce(enum BOOL flush)
 		msg_on_count = 0;
 		both_on_count = 0;
 		enc_on_count = 0;
+		enca_on_count = 0;
+		encb_on_count = 0;
 	}
 
 	// Debounce DIT
@@ -608,9 +605,9 @@ void read_voltage(void)
 	// Get ADC value
 	vcc_mon = ADCH;
 
-	// Full scale reading at uC is 15.7 V
-	// Well use fixed point numbers, so full scale is 157 * 0.1 V
-	vcc = (vcc_mon * 157) / 256;
+	// Full scale reading at uC is 15.8 V
+	// We'll use fixed point numbers, so full scale is 158 * 0.1 V
+	vcc = (vcc_mon * 158) / 256;
 
 	// Format for output
 	sprintf(vcc_out, "%dR%d", vcc / 10, vcc % 10);
@@ -689,7 +686,7 @@ void poll_buttons(void)
 			RIT_LED_PORT |= _BV(RIT_LED);
 			rit_enable = TRUE;
 			dds_rit_freq_word = dds_freq_word;
-			tune_dds(dds_rit_freq_word, REG_1);
+			tune_dds(dds_rit_freq_word, REG_1, FALSE);
 			debounce(TRUE);
 		}
 		else
@@ -699,7 +696,7 @@ void poll_buttons(void)
 			RIT_LED_PORT &= ~(_BV(RIT_LED));
 			rit_enable = FALSE;
 			dds_freq_word = dds_rit_freq_word;
-			tune_dds(dds_freq_word, REG_0);
+			tune_dds(dds_freq_word, REG_0, FALSE);
 			debounce(TRUE);
 		}
 	}
@@ -721,23 +718,45 @@ void poll_buttons(void)
 		// Compare current B state to previous A state
 		if((prev_enc_state ^ (cur_enc_state & 0x01)) == 1)
 		{
-
-			dds_freq_word -= tune_step;
-			tune_freq -= tune_freq_step;
-			tune_dds(dds_freq_word, REG_0);
+			if(tune_freq > LOWER_FREQ_LIMIT)
+			{
+				dds_freq_word -= tune_step;
+				tune_freq -= tune_freq_step;
+				tune_dds(dds_freq_word, REG_0, FALSE);
+			}
+			else
+			{
+				announce("L", ST_HIGH, 23);
+				debounce(TRUE);
+			}
 		}
 		else
 		{
-			dds_freq_word += tune_step;
-			tune_freq += tune_freq_step;
-			tune_dds(dds_freq_word, REG_0);
+			if(tune_freq < UPPER_FREQ_LIMIT)
+			{
+				dds_freq_word += tune_step;
+				tune_freq += tune_freq_step;
+				tune_dds(dds_freq_word, REG_0, FALSE);
+			}
+			else
+			{
+				announce("U", ST_HIGH, 23);
+				debounce(TRUE);
+			}
+
+			/*
+			if(tune_freq == LOWER_FREQ_LIMIT)
+				announce("L", ST_HIGH, 23);
+			else if(tune_freq == UPPER_FREQ_LIMIT)
+				announce("U", ST_HIGH, 23);
+				*/
 		}
 	}
 
 	prev_enc_state = cur_enc_state;
 }
 
-void tune_dds(uint32_t dds_word, enum FREQREG reg)
+void tune_dds(uint32_t dds_word, enum FREQREG reg, enum BOOL init)
 {
 	uint16_t dds_word_high, dds_word_low, freq_reg;
 
@@ -749,19 +768,26 @@ void tune_dds(uint32_t dds_word, enum FREQREG reg)
 	dds_word_low = (uint16_t)((dds_word & 0x3FFF) + freq_reg);
 	dds_word_high = (uint16_t)(((dds_word >> 14) & 0x3FFF) + freq_reg);
 
-	// Control register
-	//if(reg == REG_1)
-		//send_dds_word(0x2800);
-	//else
-		//send_dds_word(0x2000);
+	if(init == TRUE)
+		send_dds_word(0x2100);
 
 	// Send frequency word LSB
 	send_dds_word(dds_word_low);
 
 	// Send frequency word MSB
 	send_dds_word(dds_word_high);
+
+	if(init == TRUE)
+	{
+		// Send phase
+		send_dds_word(0xC000);
+
+		// Exit reset
+		send_dds_word(0x2000);
+	}
 }
 
+/*
 void init_dds(uint32_t dds_word, enum FREQREG reg)
 {
 	uint16_t dds_word_high, dds_word_low, freq_reg;
@@ -792,6 +818,7 @@ void init_dds(uint32_t dds_word, enum FREQREG reg)
 	// Exit reset
 	send_dds_word(0x2000);
 }
+*/
 
 void send_dds_word(uint16_t dds_word)
 {
@@ -842,11 +869,13 @@ int main(void)
 	// Check to see if we should startup in straight key mode
 	for (uint8_t i = 0; i < DEBOUNCE_PRESS_TIME + 10; i++)
 		debounce(FALSE);
-
-	if((dah_active == TRUE) && (dit_active == FALSE))
+	if(eeprom_read_byte(&ee_keyer) == FALSE)
 		cur_mode = SK;
 	else
 		cur_mode = KEYER;
+
+	if((dah_active == TRUE) && (dit_active == FALSE))
+		cur_mode = SK;
 
 	announce("CC", st_freq, 15);
 
@@ -869,10 +898,13 @@ int main(void)
 			case IDLE:
 				key_down = FALSE;
 				sidetone_on = FALSE;
+				mute_on = FALSE;
+				/*
 				if(allow_sleep == TRUE)
 					mute_on = FALSE;
 				else
 					mute_on = TRUE;
+					*/
 
 				if(dit_active == TRUE)
 				{
@@ -888,9 +920,18 @@ int main(void)
 				break;
 
 			case KEYDOWN:
-				key_down = TRUE;
-				sidetone_on = TRUE;
-				mute_on = TRUE;
+				if(tune_freq > UPPER_FREQ_LIMIT || tune_freq < LOWER_FREQ_LIMIT)
+				{
+					key_down = FALSE;
+					sidetone_on = FALSE;
+					mute_on = FALSE;
+				}
+				else
+				{
+					key_down = TRUE;
+					sidetone_on = TRUE;
+					mute_on = TRUE;
+				}
 
 				if(dit_active == FALSE)
 				{
@@ -905,7 +946,11 @@ int main(void)
 			case EXIT:
 				key_down = FALSE;
 				sidetone_on = FALSE;
-				mute_on = TRUE;
+
+				if(tune_freq > UPPER_FREQ_LIMIT || tune_freq < LOWER_FREQ_LIMIT)
+					mute_on = FALSE;
+				else
+					mute_on = TRUE;
 
 				if(cur_timer >= cur_state_end)
 					cur_state = IDLE;
@@ -997,9 +1042,18 @@ int main(void)
 				break;
 
 			case DIT:
-				key_down = TRUE;
-				sidetone_on = TRUE;
-				mute_on = TRUE;
+				if(tune_freq > UPPER_FREQ_LIMIT || tune_freq < LOWER_FREQ_LIMIT)
+				{
+					key_down = FALSE;
+					sidetone_on = FALSE;
+					mute_on = FALSE;
+				}
+				else
+				{
+					key_down = TRUE;
+					sidetone_on = TRUE;
+					mute_on = TRUE;
+				}
 
 				if(cur_timer > cur_state_end)
 				{
@@ -1016,6 +1070,19 @@ int main(void)
 				break;
 
 			case DAH:
+				if(tune_freq > UPPER_FREQ_LIMIT || tune_freq < LOWER_FREQ_LIMIT)
+				{
+					key_down = FALSE;
+					sidetone_on = FALSE;
+					mute_on = FALSE;
+				}
+				else
+				{
+					key_down = TRUE;
+					sidetone_on = TRUE;
+					mute_on = TRUE;
+				}
+
 				if(cur_timer > cur_state_end)
 				{
 					prev_state = DAH;
@@ -1028,9 +1095,6 @@ int main(void)
 				if((dit_active == TRUE) && (next_state == IDLE))
 					next_state = DIT;
 
-				key_down = TRUE;
-				sidetone_on = TRUE;
-				mute_on = TRUE;
 				break;
 
 			case DITDELAY:
@@ -1071,7 +1135,10 @@ int main(void)
 
 				key_down = FALSE;
 				sidetone_on = FALSE;
-				mute_on = TRUE;
+				if(tune_freq > UPPER_FREQ_LIMIT || tune_freq < LOWER_FREQ_LIMIT)
+					mute_on = FALSE;
+				else
+					mute_on = TRUE;
 				break;
 
 			case EXIT:
@@ -1358,6 +1425,7 @@ int main(void)
 								default_mode = SK;
 								cur_state = IDLE;
 								cur_mode = default_mode;
+								eeprom_write_byte(&ee_keyer, FALSE);
 
 								announce("S", st_freq, wpm);
 							}
@@ -1366,8 +1434,9 @@ int main(void)
 								default_mode = KEYER;
 								cur_state = IDLE;
 								cur_mode = default_mode;
+								eeprom_write_byte(&ee_keyer, TRUE);
 
-								announce("P", st_freq, wpm);
+								announce("K", st_freq, wpm);
 							}
 							break;
 
@@ -1551,7 +1620,7 @@ int main(void)
 				break;
 			}
 			break;
-
+		/*
 		case RECORD:
 			switch(cur_state)
 			{
@@ -1615,16 +1684,16 @@ int main(void)
 					if(rec_count >= 6)
 						next_state = VALIDATECHAR;
 				}
-				/*
-				else
-				{
-					cur_state = IDLE;
-					cur_state_end = cur_timer;
-				}*/
+
+				//else
+				//{
+				//	cur_state = IDLE;
+				//	cur_state_end = cur_timer;
+				//}
 
 				// Handle character record timeout
 				// Need to handle SPACE
-				if((cur_timer > rec_timeout)/* && (rec_input > 0)*/)
+				if((cur_timer > rec_timeout))// && (rec_input > 0))
 					cur_state = VALIDATECHAR;
 
 				// If CMD is pressed, we are done recording
@@ -1765,7 +1834,7 @@ int main(void)
 				break;
 			}
 			break;
-
+		*/
 		default:
 			break;
 		} // END switch(cur_mode)
