@@ -758,9 +758,10 @@ void poll_buttons(void)
 				RIT_LED_DDR |= _BV(RIT_LED);
 				//RIT_LED_PORT |= _BV(RIT_LED);
 				dds_rit_freq_word = dds_freq_word;
+				tune_dds(dds_rit_freq_word, REG_0, FALSE);
 				tune_dds(dds_rit_freq_word, REG_1, FALSE);
-				tune_reg = REG_0;
-				set_dds_freq_reg(tune_reg);
+				//tune_reg = REG_0;
+				//set_dds_freq_reg(tune_reg);
 				debounce(TRUE);
 				sleep_timer = cur_timer + SLEEP_DELAY;
 				announce("R", ST_HIGH, 25);
@@ -770,8 +771,9 @@ void poll_buttons(void)
 				RIT_LED_DDR |= _BV(RIT_LED);
 				//RIT_LED_PORT |= _BV(RIT_LED);
 				led_toggle = cur_timer + XIT_BLINK;
-				dds_xit_freq_word = dds_freq_word;
+				dds_xit_freq_word = dds_rit_freq_word;
 				tune_dds(dds_xit_freq_word, REG_0, FALSE);
+				tune_dds(dds_xit_freq_word, REG_1, FALSE);
 				tune_reg = REG_1;
 				set_dds_freq_reg(tune_reg);
 				debounce(TRUE);
@@ -783,8 +785,9 @@ void poll_buttons(void)
 			default:
 				RIT_LED_DDR &= ~(_BV(RIT_LED));
 				RIT_LED_PORT &= ~(_BV(RIT_LED));
-				dds_freq_word = dds_rit_freq_word;
+				dds_freq_word = dds_xit_freq_word;
 				tune_dds(dds_freq_word, REG_0, FALSE);
+				tune_dds(dds_freq_word, REG_1, FALSE);
 				tune_reg = REG_0;
 				set_dds_freq_reg(tune_reg);
 				debounce(TRUE);
@@ -835,47 +838,43 @@ void poll_buttons(void)
 		if((prev_enc_state ^ (cur_enc_state & 0x01)) == 1)
 		{
 			// Don't allow tuning if we are on the locked VFO
-			if((inc_tune_state == RIT && tune_reg == REG_1) || (inc_tune_state == XIT && tune_reg == REG_0))
+			if((inc_tune_state == RIT && tune_reg == REG_0) || (inc_tune_state == XIT && tune_reg == REG_1))
 			{
-				//announce("E", ST_HIGH, 25);
-				//debounce(TRUE);
-			}
-			// Tune down as long as we have not hit lower limit
-			else if(tune_freq > LOWER_FREQ_LIMIT)
-			{
-				dds_freq_word -= tune_step;
-				tune_freq -= tune_freq_step;
-				tune_dds(dds_freq_word, tune_reg, FALSE);
-				//set_dds_freq_reg(tune_reg);
-			}
-			else
-			{
-				announce("L", ST_HIGH, 25);
-				debounce(TRUE);
+
+				if(tune_freq > LOWER_FREQ_LIMIT)
+				{
+					dds_freq_word -= tune_step;
+					tune_freq -= tune_freq_step;
+					tune_dds(dds_freq_word, tune_reg, FALSE);
+					set_dds_freq_reg(tune_reg);
+				}
+				else
+				{
+					announce("L", ST_HIGH, 25);
+					debounce(TRUE);
+				}
 			}
 		}
 		else
 		{
 			// Don't allow tuning if we are on the locked VFO
-			if((inc_tune_state == RIT && tune_reg == REG_1) || (inc_tune_state == XIT && tune_reg == REG_0))
+			if((inc_tune_state == RIT && tune_reg == REG_0) || (inc_tune_state == XIT && tune_reg == REG_1))
 			{
-				//announce("E", ST_HIGH, 25);
-				//debounce(TRUE);
-			}
-			// Tune up as long as we are not at upper limit
-			if(tune_freq < UPPER_FREQ_LIMIT)
-			{
-				dds_freq_word += tune_step;
-				tune_freq += tune_freq_step;
-				tune_dds(dds_freq_word, tune_reg, FALSE);
-				//set_dds_freq_reg(tune_reg);
-			}
-			else
-			{
-				announce("U", ST_HIGH, 25);
-				debounce(TRUE);
-			}
 
+				// Tune up as long as we are not at upper limit
+				if(tune_freq < UPPER_FREQ_LIMIT)
+				{
+					dds_freq_word += tune_step;
+					tune_freq += tune_freq_step;
+					tune_dds(dds_freq_word, tune_reg, FALSE);
+					set_dds_freq_reg(tune_reg);
+				}
+				else
+				{
+					announce("U", ST_HIGH, 25);
+					debounce(TRUE);
+				}
+			}
 			/*
 			if(tune_freq == LOWER_FREQ_LIMIT)
 				announce("L", ST_HIGH, 23);
