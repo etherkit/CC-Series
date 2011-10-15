@@ -757,6 +757,9 @@ void poll_buttons(void)
 			case RIT:
 				RIT_LED_DDR |= _BV(RIT_LED);
 				//RIT_LED_PORT |= _BV(RIT_LED);
+				tune_rate = SLOW;
+				tune_step = DDS_20HZ;
+				tune_freq_step = 5;
 				dds_rit_freq_word = dds_freq_word;
 				tune_dds(dds_rit_freq_word, REG_0, FALSE);
 				tune_dds(dds_rit_freq_word, REG_1, FALSE);
@@ -771,6 +774,9 @@ void poll_buttons(void)
 				RIT_LED_DDR |= _BV(RIT_LED);
 				//RIT_LED_PORT |= _BV(RIT_LED);
 				led_toggle = cur_timer + XIT_BLINK;
+				tune_rate = FAST;
+				tune_step = DDS_100HZ;
+				tune_freq_step = 25;
 				dds_xit_freq_word = dds_rit_freq_word;
 				tune_dds(dds_xit_freq_word, REG_0, FALSE);
 				tune_dds(dds_xit_freq_word, REG_1, FALSE);
@@ -785,6 +791,9 @@ void poll_buttons(void)
 			default:
 				RIT_LED_DDR &= ~(_BV(RIT_LED));
 				RIT_LED_PORT &= ~(_BV(RIT_LED));
+				tune_rate = FAST;
+				tune_step = DDS_100HZ;
+				tune_freq_step = 25;
 				dds_freq_word = dds_xit_freq_word;
 				tune_dds(dds_freq_word, REG_0, FALSE);
 				tune_dds(dds_freq_word, REG_1, FALSE);
