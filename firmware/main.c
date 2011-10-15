@@ -264,7 +264,7 @@ ISR(TIMER2_COMPA_vect)
 	}
 	else
 	{
-		set_dds_freq_reg(REG_0);
+		set_dds_freq_reg(tune_reg);
 		TX_PORT &= ~(_BV(TX));
 	}
 
@@ -838,7 +838,7 @@ void poll_buttons(void)
 		if((prev_enc_state ^ (cur_enc_state & 0x01)) == 1)
 		{
 			// Don't allow tuning if we are on the locked VFO
-			if((inc_tune_state == RIT && tune_reg == REG_0) || (inc_tune_state == XIT && tune_reg == REG_1))
+			if((inc_tune_state == RIT && tune_reg == REG_0) || (inc_tune_state == XIT && tune_reg == REG_1) || (inc_tune_state == NONE))
 			{
 
 				if(tune_freq > LOWER_FREQ_LIMIT)
@@ -858,7 +858,7 @@ void poll_buttons(void)
 		else
 		{
 			// Don't allow tuning if we are on the locked VFO
-			if((inc_tune_state == RIT && tune_reg == REG_0) || (inc_tune_state == XIT && tune_reg == REG_1))
+			if((inc_tune_state == RIT && tune_reg == REG_0) || (inc_tune_state == XIT && tune_reg == REG_1) || (inc_tune_state == NONE))
 			{
 
 				// Tune up as long as we are not at upper limit
