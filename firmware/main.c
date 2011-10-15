@@ -101,11 +101,12 @@
 #define MENU_EXPIRATION			4000		// Menu expiration time (in 1 ms increments)
 #define REC_EXPIRATION			1000		// Keyer memory character record expiration
 #define MSG_BUFFER_SIZE			41			// Keyer message size in characters
-#define SLEEP_DELAY				400		// Time (in ms) to delay before going to sleep because of inactivity
-#define ST_REFCLK				268435		// 16 MHz clock / 16 kHz sample rate
+#define SLEEP_DELAY				300		// Time (in ms) to delay before going to sleep because of inactivity
+#define ST_REFCLK				268435		// Sidetone DDS ref clock - 16 MHz clock / 16 kHz sample rate
 #define ST_DEFAULT				500			// Default sidetone frequency
 #define ST_HIGH					900			// High sidetone frequency
 #define ST_LOW					400			// Low sidetone frequency
+#define XIT_BLINK				500		// LED blick time in ms
 
 // DDS tuning steps (25 MHz master clock)
 #define DDS_10HZ				0x1A		// DDS tuning word 10 Hz increment (/4, since each click of enc is 4 activations)
@@ -129,7 +130,8 @@ enum STATE {INIT, IDLE, DIT, DAH, DITDELAY, DAHDELAY, WORDDELAY, KEYDOWN, ENDKEY
 enum MODE {KEYER, SK, ANNOUNCE, TUNE, MENU, SETWPM, PLAYBACK, RECORD};
 enum BTN {OFF, PRESS, HOLD};
 enum TUNERATE {SLOW, FAST};
-enum FREQREG {REG_0, REG_1};
+enum FREQREG {REG_0, REG_1}; // During incremental tuning, REG_0 is the RX freq, REG_1 is the TX freq
+enum INCTUNE {NONE, RIT, XIT};
 
 // Global variable defs
 uint16_t dit_length;
@@ -159,11 +161,12 @@ volatile enum BOOL dit_active, dah_active;
 volatile enum BOOL allow_sleep = TRUE;
 volatile enum BTN cmd_btn, msg_btn, both_btn, enc_btn;
 volatile enum BOOL enc_a, enc_b;
-volatile enum BOOL rit_enable;
-volatile uint32_t tx_start, tx_end, mute_start, mute_end;
+volatile enum INCTUNE inc_tune_state;
+volatile enum FREQREG tune_reg;
+volatile uint32_t tx_start, tx_end, mute_start, mute_end, led_toggle;
 volatile uint32_t st_phase_acc, st_tune_word;
 volatile uint8_t st_sine_lookup;
-volatile uint32_t dds_freq_word, dds_rit_freq_word;
+volatile uint32_t dds_freq_word, dds_rit_freq_word, dds_xit_freq_word;
 volatile uint32_t tune_freq;
 
 // EEPROM variables
@@ -193,10 +196,19 @@ ISR(TIMER1_COMPA_vect)
 {
 	if(sidetone_on == TRUE)
 	{
+		//SIDETONE_DDR |= _BV(SIDETONE);
+
 		st_phase_acc = st_phase_acc + st_tune_word;
 		st_sine_lookup = (uint8_t)(st_phase_acc >> 24);
 		OCR0A = pgm_read_byte_near(&sinewave[st_sine_lookup]); // Just use the upper 8 bits for sine lookup
 	}
+	/*
+	else
+	{
+		// Hi-Z the port when not using
+		SIDETONE_DDR &= ~(_BV(SIDETONE));
+		OCR0A = 0;
+	} */
 }
 
 // Timer1 ISR
@@ -244,14 +256,35 @@ ISR(TIMER2_COMPA_vect)
 	// Handle transmit
 	if((key_down == TRUE) && (timer < tx_end) && (timer > tx_start))
 	{
-		if(rit_enable == TRUE)
+		if(inc_tune_state == RIT || inc_tune_state == XIT)
 			set_dds_freq_reg(REG_1);
+		else
+			set_dds_freq_reg(REG_0);
 		TX_PORT |= _BV(TX);
 	}
 	else
 	{
 		set_dds_freq_reg(REG_0);
 		TX_PORT &= ~(_BV(TX));
+	}
+
+	// Handle the RIT/XIT LED
+	if(inc_tune_state != NONE)
+	{
+		if(inc_tune_state == RIT)
+		{
+			//RIT_LED_DDR |= _BV(RIT_LED);
+			RIT_LED_PORT |= _BV(RIT_LED);
+		}
+		else if(inc_tune_state == XIT)
+		{
+			if(cur_timer > led_toggle)
+			{
+				RIT_LED_PORT ^= _BV(RIT_LED);
+				led_toggle = cur_timer + XIT_BLINK;
+			}
+		}
+
 	}
 
 	debounce(FALSE);
@@ -362,6 +395,8 @@ void init(void)
 	power_twi_disable();
 	power_usart0_disable();
 
+	set_sleep_mode(SLEEP_MODE_STANDBY);
+
 	// Initialize global variables
 	prev_state = IDLE;
 	cur_state = IDLE;
@@ -382,6 +417,9 @@ void init(void)
 	st_freq = ST_DEFAULT;
 	set_st_freq(st_freq);
 
+	inc_tune_state = OFF;
+	tune_reg = REG_0;
+
 	// Enable interrupts
 	sei();
 }
@@ -389,7 +427,7 @@ void init(void)
 void set_wpm(uint8_t new_wpm)
 {
 	// Dit length in milliseconds is 1200 ms / WPM
-	// then divide that by the 100 us per timer tick (dividing by 0.1 ms, so multiply by 10)
+	// then divide that by the 1 ms per timer tick
 	dit_length = (1200 / new_wpm);
 }
 
@@ -558,11 +596,13 @@ void debounce(enum BOOL flush)
 	if(encb_off_count >= DEBOUNCE_PRESS_TIME)
 		enc_b = FALSE;
 
+	/*
 	// Don't go to sleep if there are any paddle or button presses
 	if((dit_on_count > 0) || (dah_on_count > 0) || (cmd_on_count > 0) || (msg_on_count > 0) || (both_on_count > 0))
 		allow_sleep = FALSE;
 	else
 		allow_sleep = TRUE;
+		*/
 }
 
 void announce(char * msg, uint16_t freq, uint8_t speed)
@@ -668,27 +708,91 @@ void poll_buttons(void)
 
 	if(enc_btn == PRESS)
 	{
-		if(tune_rate == FAST)
+		// If we are in normal tuning mode, pressing the tune knob toggles tuning rates
+		if(inc_tune_state == NONE)
 		{
-			tune_rate = SLOW;
-			tune_step = DDS_20HZ;
-			tune_freq_step = 5;
-			sleep_timer = cur_timer + SLEEP_DELAY;
-			debounce(TRUE);
-			announce("S", ST_LOW, 25);
+			if(tune_rate == FAST)
+			{
+				tune_rate = SLOW;
+				tune_step = DDS_20HZ;
+				tune_freq_step = 5;
+				sleep_timer = cur_timer + SLEEP_DELAY;
+				debounce(TRUE);
+				announce("S", ST_LOW, 25);
+			}
+			else
+			{
+				tune_rate = FAST;
+				tune_step = DDS_100HZ;
+				tune_freq_step = 25;
+				sleep_timer = cur_timer + SLEEP_DELAY;
+				debounce(TRUE);
+				announce("S", ST_HIGH, 25);
+			}
 		}
+		// Otherwise if we are in RIT or XIT, pressing the tune knob toggles between the two VFOs
 		else
 		{
-			tune_rate = FAST;
-			tune_step = DDS_100HZ;
-			tune_freq_step = 25;
-			sleep_timer = cur_timer + SLEEP_DELAY;
-			debounce(TRUE);
-			announce("S", ST_HIGH, 25);
+			if(tune_reg == REG_0)
+			{
+				tune_reg = REG_1;
+				announce("T", ST_LOW, 25);
+			}
+			else
+			{
+				tune_reg = REG_0;
+				announce("R", ST_LOW, 25);
+			}
 		}
 	}
 	else if(enc_btn == HOLD)
 	{
+		// Rotate through the 3 states
+		inc_tune_state++;
+		if(inc_tune_state > 2)
+			inc_tune_state = NONE;
+
+		switch(inc_tune_state)
+		{
+			case RIT:
+				RIT_LED_DDR |= _BV(RIT_LED);
+				//RIT_LED_PORT |= _BV(RIT_LED);
+				dds_rit_freq_word = dds_freq_word;
+				tune_dds(dds_rit_freq_word, REG_1, FALSE);
+				tune_reg = REG_0;
+				set_dds_freq_reg(tune_reg);
+				debounce(TRUE);
+				sleep_timer = cur_timer + SLEEP_DELAY;
+				announce("R", ST_HIGH, 25);
+				break;
+
+			case XIT:
+				RIT_LED_DDR |= _BV(RIT_LED);
+				//RIT_LED_PORT |= _BV(RIT_LED);
+				led_toggle = cur_timer + XIT_BLINK;
+				dds_xit_freq_word = dds_freq_word;
+				tune_dds(dds_xit_freq_word, REG_0, FALSE);
+				tune_reg = REG_1;
+				set_dds_freq_reg(tune_reg);
+				debounce(TRUE);
+				sleep_timer = cur_timer + SLEEP_DELAY;
+				announce("X", ST_HIGH, 25);
+				break;
+
+			case NONE:
+			default:
+				RIT_LED_DDR &= ~(_BV(RIT_LED));
+				RIT_LED_PORT &= ~(_BV(RIT_LED));
+				dds_freq_word = dds_rit_freq_word;
+				tune_dds(dds_freq_word, REG_0, FALSE);
+				tune_reg = REG_0;
+				set_dds_freq_reg(tune_reg);
+				debounce(TRUE);
+				sleep_timer = cur_timer + SLEEP_DELAY;
+				announce("O", ST_HIGH, 25);
+				break;
+		}
+		/*
 		if(rit_enable == FALSE)
 		{
 			RIT_LED_DDR |= _BV(RIT_LED);
@@ -709,7 +813,7 @@ void poll_buttons(void)
 			tune_dds(dds_freq_word, REG_0, FALSE);
 			debounce(TRUE);
 			sleep_timer = cur_timer + SLEEP_DELAY;
-		}
+		} */
 	}
 
 	// Handle encoder
@@ -730,29 +834,45 @@ void poll_buttons(void)
 		// Compare current B state to previous A state
 		if((prev_enc_state ^ (cur_enc_state & 0x01)) == 1)
 		{
-			if(tune_freq > LOWER_FREQ_LIMIT)
+			// Don't allow tuning if we are on the locked VFO
+			if((inc_tune_state == RIT && tune_reg == REG_1) || (inc_tune_state == XIT && tune_reg == REG_0))
+			{
+				//announce("E", ST_HIGH, 25);
+				//debounce(TRUE);
+			}
+			// Tune down as long as we have not hit lower limit
+			else if(tune_freq > LOWER_FREQ_LIMIT)
 			{
 				dds_freq_word -= tune_step;
 				tune_freq -= tune_freq_step;
-				tune_dds(dds_freq_word, REG_0, FALSE);
+				tune_dds(dds_freq_word, tune_reg, FALSE);
+				//set_dds_freq_reg(tune_reg);
 			}
 			else
 			{
-				announce("L", ST_HIGH, 23);
+				announce("L", ST_HIGH, 25);
 				debounce(TRUE);
 			}
 		}
 		else
 		{
+			// Don't allow tuning if we are on the locked VFO
+			if((inc_tune_state == RIT && tune_reg == REG_1) || (inc_tune_state == XIT && tune_reg == REG_0))
+			{
+				//announce("E", ST_HIGH, 25);
+				//debounce(TRUE);
+			}
+			// Tune up as long as we are not at upper limit
 			if(tune_freq < UPPER_FREQ_LIMIT)
 			{
 				dds_freq_word += tune_step;
 				tune_freq += tune_freq_step;
-				tune_dds(dds_freq_word, REG_0, FALSE);
+				tune_dds(dds_freq_word, tune_reg, FALSE);
+				//set_dds_freq_reg(tune_reg);
 			}
 			else
 			{
-				announce("U", ST_HIGH, 23);
+				announce("U", ST_HIGH, 25);
 				debounce(TRUE);
 			}
 
@@ -974,6 +1094,7 @@ int main(void)
 				break;
 			}
 
+			/*
 			// Go to sleep
 			set_sleep_mode(SLEEP_MODE_PWR_DOWN);
 			cli();
@@ -987,6 +1108,7 @@ int main(void)
 				sleep_disable();
 			}
 			sei();
+			*/
 
 			break;
 
@@ -1164,12 +1286,13 @@ int main(void)
 				break;
 			}
 
+			/*
 			// Go to sleep
-			set_sleep_mode(SLEEP_MODE_STANDBY);
 			cli();
 			if((cur_mode == KEYER) && (cur_state == IDLE) && (cur_timer > sleep_timer))
 			{
 				MUTE_PORT &= ~(_BV(MUTE));
+				//SIDETONE_DDR &= ~(_BV(SIDETONE));
 				PCICR = _BV(PCIE2);
 				sleep_enable();
 				sei();
@@ -1177,6 +1300,7 @@ int main(void)
 				sleep_disable();
 			}
 			sei();
+			*/
 
 			break;
 
