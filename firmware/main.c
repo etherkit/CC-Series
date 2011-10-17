@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/sfr_defs.h>
@@ -168,6 +169,7 @@ volatile uint32_t st_phase_acc, st_tune_word;
 volatile uint8_t st_sine_lookup;
 volatile uint32_t dds_freq_word, dds_it_freq_word;
 volatile uint32_t tune_freq;
+volatile int16_t it_delta;
 
 // EEPROM variables
 uint8_t EEMEM ee_wpm = DEFAULT_WPM;
@@ -678,7 +680,15 @@ void count_frequency(void)
 	freq_out = malloc(15);
 
 	// Format and output frequency
-	sprintf(freq_out, "%02uR%02u", (unsigned int)((tune_freq / 1000) % 100), (unsigned int)((tune_freq % 1000) / 10));
+	if(inc_tune_state == XIT || inc_tune_state == RIT)
+	{
+		if(it_delta < 0)
+			sprintf(freq_out, "-%1iR%2.2i", (int)abs(((it_delta / 1000) % 100)), (int)abs(((it_delta % 1000) / 10)));
+		else
+			sprintf(freq_out, "%1iR%2.2i", (int)((it_delta / 1000) % 100), (int)abs(((it_delta % 1000) / 10)));
+	}
+	else
+		sprintf(freq_out, "%02uR%02u", (unsigned int)((tune_freq / 1000) % 100), (unsigned int)((tune_freq % 1000) / 10));
 	announce(freq_out, st_freq, wpm);
 
 	free(freq_out);
@@ -776,8 +786,9 @@ void poll_buttons(void)
 				dds_it_freq_word = dds_freq_word;
 				tune_dds(dds_it_freq_word, REG_0, FALSE);
 				tune_dds(dds_it_freq_word, REG_1, FALSE);
-				//tune_reg = REG_0;
-				//set_dds_freq_reg(tune_reg);
+				tune_reg = REG_0;
+				set_dds_freq_reg(tune_reg);
+				it_delta = 0;
 				debounce(TRUE);
 				sleep_timer = cur_timer + SLEEP_DELAY;
 				announce("R", ST_HIGH, 25);
@@ -794,6 +805,7 @@ void poll_buttons(void)
 				tune_dds(dds_it_freq_word, REG_1, FALSE);
 				tune_reg = REG_1;
 				set_dds_freq_reg(tune_reg);
+				it_delta = 0;
 				debounce(TRUE);
 				sleep_timer = cur_timer + SLEEP_DELAY;
 				announce("X", ST_HIGH, 25);
@@ -811,6 +823,7 @@ void poll_buttons(void)
 				tune_dds(dds_freq_word, REG_1, FALSE);
 				tune_reg = REG_0;
 				set_dds_freq_reg(tune_reg);
+				it_delta = 0;
 				debounce(TRUE);
 				sleep_timer = cur_timer + SLEEP_DELAY;
 				announce("O", ST_HIGH, 25);
@@ -865,7 +878,10 @@ void poll_buttons(void)
 				if(tune_freq > LOWER_FREQ_LIMIT)
 				{
 					dds_freq_word -= tune_step;
-					tune_freq -= tune_freq_step;
+					if(inc_tune_state == XIT || inc_tune_state == RIT)
+						it_delta -= tune_freq_step;
+					else
+						tune_freq -= tune_freq_step;
 					tune_dds(dds_freq_word, tune_reg, FALSE);
 					set_dds_freq_reg(tune_reg);
 				}
@@ -886,7 +902,10 @@ void poll_buttons(void)
 				if(tune_freq < UPPER_FREQ_LIMIT)
 				{
 					dds_freq_word += tune_step;
-					tune_freq += tune_freq_step;
+					if(inc_tune_state == XIT || inc_tune_state == RIT)
+						it_delta += tune_freq_step;
+					else
+						tune_freq += tune_freq_step;
 					tune_dds(dds_freq_word, tune_reg, FALSE);
 					set_dds_freq_reg(tune_reg);
 				}
@@ -1051,7 +1070,7 @@ int main(void)
 
 				if(dit_active == TRUE)
 				{
-					tx_start = cur_timer;
+					tx_start = cur_timer + TX_ON_DELAY;
 					tx_end = UINT32_MAX;
 					cur_state_end = UINT32_MAX;
 					cur_state = KEYDOWN;

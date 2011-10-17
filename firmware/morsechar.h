@@ -35,7 +35,7 @@ const uint8_t morsechar[] PROGMEM = {
 		0b10000000,		// Not implemented
 		0b10000000,		// Not implemented
 		0b10000000,		// Not implemented
-		0b10000000,		// Not implemented
+		0b11100000,		// Minus sign (indicated by "M" in this implementation)
 		0b10000000,		// Not implemented
 		0b10010100,		// "/" Slash
 		0b11111100,		// "0"
