@@ -1,4 +1,4 @@
-#Mon Oct 10 13:27:58 PDT 2011
+#Sun Oct 16 23:07:43 PDT 2011
 avrtarget/ClockFrequency=16000000
 avrtarget/ExtRAMSize=0
 avrtarget/ExtendedRAM=false
@@ -11,7 +11,7 @@ avrtarget/avrdude/EEPROMFile=
 avrtarget/avrdude/EEPROMFromConfig=true
 avrtarget/avrdude/FlashFile=
 avrtarget/avrdude/FlashFromConfig=true
-avrtarget/avrdude/Fuses/ByteValues=231\:-1\:-1
+avrtarget/avrdude/Fuses/ByteValues=231\:212\:-1
 avrtarget/avrdude/Fuses/FileName=
 avrtarget/avrdude/Fuses/MCUid=atmega168
 avrtarget/avrdude/Fuses/UseFile=false

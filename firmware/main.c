@@ -94,7 +94,7 @@
 #define	MIN_WPM					5			// Minimum WPM setting
 #define MAX_WPM					40			// Maximum WPM setting
 #define TX_ON_DELAY				1			// TX sequence delay time (in 1 ms increments)
-#define MUTE_OFF_DELAY			100			// Mute off delay time (in 1 ms increments)
+#define MUTE_OFF_DELAY			50			// Mute off delay time (in 1 ms increments)
 #define ANNOUNCE_BUFFER_SIZE	41			// Buffer size for announce string
 //#define IF_FREQ					4915000UL	// IF frequency
 //#define FC_GATE_TIME			100 		// Frequency counter gate time (in 1 ms increments)
@@ -166,7 +166,7 @@ volatile enum FREQREG tune_reg;
 volatile uint32_t tx_start, tx_end, mute_start, mute_end, led_toggle;
 volatile uint32_t st_phase_acc, st_tune_word;
 volatile uint8_t st_sine_lookup;
-volatile uint32_t dds_freq_word, dds_rit_freq_word, dds_xit_freq_word;
+volatile uint32_t dds_freq_word, dds_it_freq_word;
 volatile uint32_t tune_freq;
 
 // EEPROM variables
@@ -404,10 +404,6 @@ void init(void)
 
 	timer = 0;
 
-	eeprom_busy_wait();
-	wpm = eeprom_read_byte(&ee_wpm);
-	set_wpm(wpm);
-
 	//dds_freq_word = 0x05DA5119;
 	dds_freq_word = DDS_INIT;
 	tune_freq = FREQ_INIT;
@@ -419,6 +415,23 @@ void init(void)
 
 	inc_tune_state = OFF;
 	tune_reg = REG_0;
+
+	// Check to see if we should startup in straight key mode
+	for (uint8_t i = 0; i < DEBOUNCE_PRESS_TIME + 10; i++)
+		debounce(FALSE);
+
+	eeprom_busy_wait();
+	wpm = eeprom_read_byte(&ee_wpm);
+	set_wpm(wpm);
+
+	eeprom_busy_wait();
+	if(eeprom_read_byte(&ee_keyer) == FALSE)
+		cur_mode = SK;
+	else
+		cur_mode = KEYER;
+
+	if((dah_active == TRUE) && (dit_active == FALSE))
+		cur_mode = SK;
 
 	// Enable interrupts
 	sei();
@@ -760,9 +773,9 @@ void poll_buttons(void)
 				tune_rate = SLOW;
 				tune_step = DDS_20HZ;
 				tune_freq_step = 5;
-				dds_rit_freq_word = dds_freq_word;
-				tune_dds(dds_rit_freq_word, REG_0, FALSE);
-				tune_dds(dds_rit_freq_word, REG_1, FALSE);
+				dds_it_freq_word = dds_freq_word;
+				tune_dds(dds_it_freq_word, REG_0, FALSE);
+				tune_dds(dds_it_freq_word, REG_1, FALSE);
 				//tune_reg = REG_0;
 				//set_dds_freq_reg(tune_reg);
 				debounce(TRUE);
@@ -777,9 +790,8 @@ void poll_buttons(void)
 				tune_rate = FAST;
 				tune_step = DDS_100HZ;
 				tune_freq_step = 25;
-				dds_xit_freq_word = dds_rit_freq_word;
-				tune_dds(dds_xit_freq_word, REG_0, FALSE);
-				tune_dds(dds_xit_freq_word, REG_1, FALSE);
+				tune_dds(dds_it_freq_word, REG_0, FALSE);
+				tune_dds(dds_it_freq_word, REG_1, FALSE);
 				tune_reg = REG_1;
 				set_dds_freq_reg(tune_reg);
 				debounce(TRUE);
@@ -794,7 +806,7 @@ void poll_buttons(void)
 				tune_rate = FAST;
 				tune_step = DDS_100HZ;
 				tune_freq_step = 25;
-				dds_freq_word = dds_xit_freq_word;
+				dds_freq_word = dds_it_freq_word;
 				tune_dds(dds_freq_word, REG_0, FALSE);
 				tune_dds(dds_freq_word, REG_1, FALSE);
 				tune_reg = REG_0;
@@ -1006,17 +1018,6 @@ int main(void)
 
 	init();
 
-	// Check to see if we should startup in straight key mode
-	for (uint8_t i = 0; i < DEBOUNCE_PRESS_TIME + 10; i++)
-		debounce(FALSE);
-	if(eeprom_read_byte(&ee_keyer) == FALSE)
-		cur_mode = SK;
-	else
-		cur_mode = KEYER;
-
-	if((dah_active == TRUE) && (dit_active == FALSE))
-		cur_mode = SK;
-
 	announce("CC", st_freq, 15);
 
 	// Main event loop
@@ -1050,7 +1051,7 @@ int main(void)
 
 				if(dit_active == TRUE)
 				{
-					tx_start = cur_timer + TX_ON_DELAY;
+					tx_start = cur_timer;
 					tx_end = UINT32_MAX;
 					cur_state_end = UINT32_MAX;
 					cur_state = KEYDOWN;
@@ -1560,6 +1561,7 @@ int main(void)
 								default_mode = SK;
 								cur_state = IDLE;
 								cur_mode = default_mode;
+								eeprom_busy_wait();
 								eeprom_write_byte(&ee_keyer, FALSE);
 
 								announce("S", st_freq, wpm);
@@ -1569,6 +1571,7 @@ int main(void)
 								default_mode = KEYER;
 								cur_state = IDLE;
 								cur_mode = default_mode;
+								eeprom_busy_wait();
 								eeprom_write_byte(&ee_keyer, TRUE);
 
 								announce("K", st_freq, wpm);
@@ -1623,6 +1626,7 @@ int main(void)
 			else // done setting WPM, announce current setting
 			{
 				// Save WPM in EEPROM
+				eeprom_busy_wait();
 				eeprom_write_byte(&ee_wpm, wpm);
 
 				cur_state = IDLE;
